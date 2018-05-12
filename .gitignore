@@ -1,0 +1,8 @@
+*.ini
+*.log
+*.tmp
+*.suo
+*.user
+.vs/
+bin/
+obj/
