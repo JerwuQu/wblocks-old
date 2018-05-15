@@ -8,15 +8,6 @@
 static int blockCount = 0;
 static struct block_Block** blocks = NULL; 
 
-static wchar_t* strWiden(const char* inStr, int inLen, int* outLen)
-{
-	int wlen = *outLen = MultiByteToWideChar(CP_UTF8, 0, inStr, inLen, NULL, 0);
-	wchar_t* outStr = malloc((wlen + 1) * sizeof(wchar_t));
-	MultiByteToWideChar(CP_UTF8, 0, inStr, inLen, outStr, wlen);
-	outStr[wlen] = 0; // Null terminator
-	return outStr;
-}
-
 static int lSetText(lua_State* L)
 {
 	if (!lua_isstring(L, 1)) return luaL_argerror(L, 1, "not a string");
@@ -61,8 +52,10 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
 	return 0;
 }
 
-void block_addBlock(char* scriptPath)
+struct block_Block* block_addBlock(char* scriptPath)
 {
+	printf("Loading: %s\n", scriptPath);
+
 	// Create bar block
 	struct block_Block* bBlock = malloc(sizeof(struct block_Block));
 	memset(bBlock, 0, sizeof(struct block_Block));
@@ -78,12 +71,13 @@ void block_addBlock(char* scriptPath)
 		free(bBlock);
 		free(tBlock);
 		free(tBlock->scriptPath);
-		return;
+		return 0;
 	}
 
 	// Add to list
 	blocks = realloc(blocks, (blockCount + 1) * sizeof(struct block_Block));
 	blocks[blockCount++] = bBlock;
+	return bBlock;
 }
 
 void block_eventHandler(struct block_Event* event)
@@ -92,9 +86,9 @@ void block_eventHandler(struct block_Event* event)
 	struct block_Block* bBlock = blocks[event->blockId];
 
 	if (event->type == BLOCK_EVENT_SETTEXT) {
-		free(bBlock->wstr);
-		bBlock->wstr = event->wstr;
-		bBlock->wstrlen = event->wstrlen;
+		free(bBlock->text.wstr);
+		bBlock->text.wstr = event->wstr;
+		bBlock->text.wlen = event->wstrlen;
 		bar_redraw();
 	}
 

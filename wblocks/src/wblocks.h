@@ -6,3 +6,5 @@
 #include <Windows.h>
 
 DWORD WBLOCKS_MESSAGE_THREAD_ID;
+
+wchar_t* strWiden(const char* inStr, int inLen, int* outLen);

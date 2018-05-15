@@ -1,6 +1,3 @@
-[submodule "inih"]
-	path = ext/inih
-	url = https://github.com/benhoyt/inih.git
 [submodule "LuaJIT"]
 	path = ext/LuaJIT
 	url = https://github.com/LuaJIT/LuaJIT.git
