@@ -12,6 +12,7 @@ static int lSetText(lua_State* L)
 {
 	if (!lua_isstring(L, 1)) return luaL_argerror(L, 1, "not a string");
 
+	// Create event
 	struct block_Event* event = malloc(sizeof(struct block_Event));
 	lua_getglobal(L, BLOCK_LUA_TBLOCK_GLOBAL);
 	struct block_t_Block* tBlock = lua_touserdata(L, -1);
@@ -19,6 +20,7 @@ static int lSetText(lua_State* L)
 	event->type = BLOCK_EVENT_SETTEXT;
 	event->wstr = strWiden(lua_tostring(L, 1), (int)lua_strlen(L, 1), &event->wstrlen);
 
+	// Send event and abandon ownership over struct
 	PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_EVENT, 0, (LPARAM)event);
 
 	return 0;
@@ -52,7 +54,7 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
 	return 0;
 }
 
-struct block_Block* block_addBlock(char* scriptPath)
+struct block_Block* block_addScriptBlock(char* scriptPath)
 {
 	printf("Loading: %s\n", scriptPath);
 
@@ -73,6 +75,21 @@ struct block_Block* block_addBlock(char* scriptPath)
 		free(tBlock->scriptPath);
 		return 0;
 	}
+
+	// Add to list
+	blocks = realloc(blocks, (blockCount + 1) * sizeof(struct block_Block));
+	blocks[blockCount++] = bBlock;
+	return bBlock;
+}
+
+struct block_Block* block_addStaticBlock(char* str, int len)
+{
+	// Create bar block
+	struct block_Block* bBlock = malloc(sizeof(struct block_Block));
+	memset(bBlock, 0, sizeof(struct block_Block));
+
+	// Set string
+	bBlock->text.wstr = strWiden(str, len, &bBlock->text.wlen);
 
 	// Add to list
 	blocks = realloc(blocks, (blockCount + 1) * sizeof(struct block_Block));

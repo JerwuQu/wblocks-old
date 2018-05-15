@@ -182,7 +182,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		struct block_Block** blocks = block_getBlocks();
 		int blockCount = block_getBlockCount();
 		SIZE textSize;
-		for (int i = 0; i < blockCount; i++) {
+		for (int i = blockCount - 1; i >= 0; i--) {
 			DrawTextW(hdc, blocks[i]->text.wstr, blocks[i]->text.wlen, &drawRect, BAR_TEXT_FLAGS);
 			GetTextExtentPoint32W(hdc, blocks[i]->text.wstr, blocks[i]->text.wlen, &textSize);
 			drawRect.right -= textSize.cx;

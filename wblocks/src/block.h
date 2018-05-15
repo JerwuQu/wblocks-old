@@ -46,7 +46,8 @@ struct block_Event
 	};
 };
 
-struct block_Block* block_addBlock(char* scriptBlock);
+struct block_Block* block_addScriptBlock(char* scriptBlock);
+struct block_Block* block_addStaticBlock(char* str, int len);
 void block_eventHandler(struct block_Event* event);
 int block_getBlockCount();
 struct block_Block** block_getBlocks();

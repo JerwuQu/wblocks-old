@@ -32,12 +32,24 @@ static int loadBlocks()
 			c = getc(fp);
 			if (c == EOF) {
 				line[i] = 0;
-				if (i > 0) block_addBlock(line);
+				if (i > 0) {
+					if (line[0] == '>') {
+						block_addStaticBlock(&line[1], i - 1);
+					} else {
+						block_addScriptBlock(line);
+					}
+				}
 				fclose(fp);
 				return 0;
 			} else if (c == '\n') {
 				line[i] = 0;
-				if (i > 0) block_addBlock(line);
+				if (i > 0) {
+					if (line[0] == '>') {
+						block_addStaticBlock(&line[1], i - 1);
+					} else {
+						block_addScriptBlock(line);
+					}
+				}
 				break;
 			} else {
 				line[i] = c;
