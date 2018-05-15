@@ -176,13 +176,13 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		// Draw text
 		SetBkMode(hdc, TRANSPARENT);
 		SelectObject(hdc, font);
-		SetTextColor(hdc, 0xffffff);
 
 		// Get blocks
 		struct block_Block** blocks = block_getBlocks();
 		int blockCount = block_getBlockCount();
 		SIZE textSize;
 		for (int i = blockCount - 1; i >= 0; i--) {
+			SetTextColor(hdc, blocks[i]->color);
 			DrawTextW(hdc, blocks[i]->text.wstr, blocks[i]->text.wlen, &drawRect, BAR_TEXT_FLAGS);
 			GetTextExtentPoint32W(hdc, blocks[i]->text.wstr, blocks[i]->text.wlen, &textSize);
 			drawRect.right -= textSize.cx;

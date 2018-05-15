@@ -3,7 +3,8 @@
 #include "../../shared.h"
 
 #define BLOCK_EVENT_SETTEXT 1
-#define BLOCK_LUA_TBLOCK_GLOBAL "__t_block__"
+#define BLOCK_EVENT_SETCOLOR 2
+#define BLOCK_LUA_TBLOCK_GLOBAL "_T_BLOCK_"
 #define BLOCK_LUA_TIMER_INTERVAL 100
 
 static int blockCount = 0;
@@ -22,6 +23,28 @@ static int lSetText(lua_State* L)
 	event->blockId = tBlock->blockId;
 	event->type = BLOCK_EVENT_SETTEXT;
 	event->wstr = strWiden(lua_tostring(L, 1), (int)lua_strlen(L, 1), &event->wstrlen);
+
+	// Send event and abandon ownership over struct
+	PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_EVENT, 0, (LPARAM)event);
+
+	return 0;
+}
+
+static int lSetColor(lua_State* L)
+{
+	if (!lua_isnumber(L, 1)) return luaL_argerror(L, 1, "not a number");
+	if (!lua_isnumber(L, 2)) return luaL_argerror(L, 2, "not a number");
+	if (!lua_isnumber(L, 3)) return luaL_argerror(L, 3, "not a number");
+
+	// Get tBlock
+	lua_getglobal(L, BLOCK_LUA_TBLOCK_GLOBAL);
+	struct block_t_Block* tBlock = lua_touserdata(L, -1);
+
+	// Create event
+	struct block_Event* event = malloc(sizeof(struct block_Event));
+	event->blockId = tBlock->blockId;
+	event->type = BLOCK_EVENT_SETCOLOR;
+	event->color = RGB(lua_tointeger(L, 1) & 0xFF, lua_tointeger(L, 2) & 0xFF, lua_tointeger(L, 3) & 0xFF);
 
 	// Send event and abandon ownership over struct
 	PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_EVENT, 0, (LPARAM)event);
@@ -100,6 +123,8 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
 	// Add functions
 	lua_pushcfunction(L, lSetText);
 	lua_setglobal(L, "SetText");
+	lua_pushcfunction(L, lSetColor);
+	lua_setglobal(L, "SetColor");
 	lua_pushcfunction(L, lAddTimer);
 	lua_setglobal(L, "AddTimer");
 
@@ -131,6 +156,7 @@ struct block_Block* block_addScriptBlock(char* scriptPath)
 	struct block_Block* bBlock = malloc(sizeof(struct block_Block));
 	memset(bBlock, 0, sizeof(struct block_Block));
 	bBlock->blockId = blockCount;
+	bBlock->color = 0xffffff;
 
 	// Create thread block
 	struct block_t_Block* tBlock = malloc(sizeof(struct block_t_Block));
@@ -160,6 +186,7 @@ struct block_Block* block_addStaticBlock(char* str, int len)
 	struct block_Block* bBlock = malloc(sizeof(struct block_Block));
 	memset(bBlock, 0, sizeof(struct block_Block));
 	bBlock->blockId = blockCount;
+	bBlock->color = 0xffffff;
 
 	// Set string
 	bBlock->text.wstr = strWiden(str, len, &bBlock->text.wlen);
@@ -179,6 +206,9 @@ void block_eventHandler(struct block_Event* event)
 		free(bBlock->text.wstr);
 		bBlock->text.wstr = event->wstr;
 		bBlock->text.wlen = event->wstrlen;
+		bar_redraw();
+	} else if (event->type == BLOCK_EVENT_SETCOLOR) {
+		bBlock->color = event->color;
 		bar_redraw();
 	}
 

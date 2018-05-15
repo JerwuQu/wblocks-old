@@ -38,6 +38,7 @@ struct block_Block
 	struct block_t_Block* tBlock;
 
 	struct wtext text;
+	COLORREF color;
 };
 
 struct block_Event
@@ -53,6 +54,7 @@ struct block_Event
 	union
 	{
 		int wstrlen; // length in characters, not bytes
+		COLORREF color;
 	};
 };
 
