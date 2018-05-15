@@ -1,13 +1,11 @@
-local ffi = require("ffi")
-ffi.cdef[[
-void Sleep(int ms);
-]]
-
-while true do
+function a()
     SetText("a")
-    ffi.C.Sleep(1000)
-    SetText("b")
-    ffi.C.Sleep(1000)
-    SetText("c")
-    ffi.C.Sleep(1000)
+    AddTimer(1000, b)
 end
+
+function b()
+    SetText("b")
+    AddTimer(1000, a)
+end
+
+a()

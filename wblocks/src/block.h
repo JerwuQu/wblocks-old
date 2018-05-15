@@ -2,9 +2,24 @@
 
 #include "wblocks.h"
 
+#include <stdint.h>
 #include <luajit.h>
 #include <lualib.h>
 #include <lauxlib.h>
+
+struct wtext
+{
+	wchar_t* wstr;
+	int wlen;
+};
+
+struct ltimer
+{
+	uint64_t time;
+	int luaRef;
+	struct ltimer* prev;
+	struct ltimer* next;
+};
 
 // Only to be accessed from script thread after creation
 struct block_t_Block
@@ -12,12 +27,7 @@ struct block_t_Block
 	int blockId;
 	char* scriptPath;
 	lua_State* L;
-};
-
-struct wtext
-{
-	wchar_t* wstr;
-	int wlen;
+	struct ltimer timer;
 };
 
 // Only to be accessed from bar/main thread
