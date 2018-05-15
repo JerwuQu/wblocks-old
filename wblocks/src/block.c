@@ -203,13 +203,19 @@ void block_eventHandler(struct block_Event* event)
 	struct block_Block* bBlock = blocks[event->blockId];
 
 	if (event->type == BLOCK_EVENT_SETTEXT) {
-		free(bBlock->text.wstr);
-		bBlock->text.wstr = event->wstr;
-		bBlock->text.wlen = event->wstrlen;
-		bar_redraw();
+		if (bBlock->text.wlen != event->wstrlen || memcmp(bBlock->text.wstr, event->wstr, event->wstrlen * sizeof(wchar_t))) {
+			free(bBlock->text.wstr);
+			bBlock->text.wstr = event->wstr;
+			bBlock->text.wlen = event->wstrlen;
+			bar_redraw();
+		} else {
+			free(event->wstr);
+		}
 	} else if (event->type == BLOCK_EVENT_SETCOLOR) {
-		bBlock->color = event->color;
-		bar_redraw();
+		if (bBlock->color != event->color) {
+			bBlock->color = event->color;
+			bar_redraw();
+		}
 	}
 
 	free(event);
