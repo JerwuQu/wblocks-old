@@ -24,6 +24,9 @@
     <ClCompile Include="src\log.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\block.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\shared.h">
@@ -33,6 +36,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\block.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\wblocks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

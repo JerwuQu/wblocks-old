@@ -1,6 +1,6 @@
 #include "bar.h"
-#include "log.h"
-#include "../../shared.h"
+#include "wblocks.h"
+#include "block.h"
 
 #include <time.h>
 #include <Windows.h>
@@ -157,7 +157,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 	if (msg == WM_PAINT) {
 		// Begin
 		PAINTSTRUCT ps;
-		HDC hdc = BeginPaint(hwnd, &ps);
+		HDC hdc = BeginPaint(hwnd, &ps); // todo use buffer
 
 		// Draw rect
 		RECT drawRect;
@@ -177,10 +177,15 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		SetBkMode(hdc, TRANSPARENT);
 		SelectObject(hdc, font);
 		SetTextColor(hdc, 0xffffff);
-		if (time(0) % 2 == 0) {
-			DrawTextW(hdc, L"Hello, World!", -1, &drawRect, BAR_TEXT_FLAGS);
-		} else {
-			DrawTextW(hdc, L":o", -1, &drawRect, BAR_TEXT_FLAGS);
+
+		// Get blocks
+		struct block_Block** blocks = block_getBlocks();
+		int blockCount = block_getBlockCount();
+		SIZE textSize;
+		for (int i = 0; i < blockCount; i++) {
+			DrawTextW(hdc, blocks[i]->wstr, blocks[i]->wstrlen, &drawRect, BAR_TEXT_FLAGS);
+			GetTextExtentPoint32W(hdc, blocks[i]->wstr, blocks[i]->wstrlen, &textSize);
+			drawRect.right -= textSize.cx;
 		}
 
 		// End
@@ -274,6 +279,12 @@ int bar_init()
 	SetTimer(0, 0, HOOK_PING_TIME * 1000, aliveTimerProc);
 
 	return 0;
+}
+
+void bar_redraw()
+{
+	if (!barWnd) return;
+	RedrawWindow(barWnd, NULL, NULL, RDW_INVALIDATE);
 }
 
 void bar_quit()

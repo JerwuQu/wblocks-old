@@ -1,4 +1,5 @@
 *.ini
+*.dll
 *.log
 *.tmp
 *.suo
