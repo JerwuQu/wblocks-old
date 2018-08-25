@@ -4,7 +4,7 @@
 
 #define BLOCK_EVENT_SETTEXT 1
 #define BLOCK_EVENT_SETCOLOR 2
-#define BLOCK_LUA_TBLOCK_GLOBAL "_T_BLOCK_"
+#define BLOCK_LUA_TBLOCK_REGKEY "WBLOCKS_TBLOCK_PTR"
 #define BLOCK_LUA_TIMER_INTERVAL 100
 
 static int blockCount = 0;
@@ -15,7 +15,8 @@ static int lSetText(lua_State* L)
 	if (!lua_isstring(L, 1)) return luaL_argerror(L, 1, "not a string");
 
 	// Get tBlock
-	lua_getglobal(L, BLOCK_LUA_TBLOCK_GLOBAL);
+	lua_pushstring(L, BLOCK_LUA_TBLOCK_REGKEY);
+	lua_gettable(L, LUA_REGISTRYINDEX);
 	struct block_t_Block* tBlock = lua_touserdata(L, -1);
 
 	// Create event
@@ -37,7 +38,8 @@ static int lSetColor(lua_State* L)
 	if (!lua_isnumber(L, 3)) return luaL_argerror(L, 3, "not a number");
 
 	// Get tBlock
-	lua_getglobal(L, BLOCK_LUA_TBLOCK_GLOBAL);
+	lua_pushstring(L, BLOCK_LUA_TBLOCK_REGKEY);
+	lua_gettable(L, LUA_REGISTRYINDEX);
 	struct block_t_Block* tBlock = lua_touserdata(L, -1);
 
 	// Create event
@@ -62,7 +64,8 @@ static int lAddTimer(lua_State* L)
 	int ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	// Get tBlock
-	lua_getglobal(L, BLOCK_LUA_TBLOCK_GLOBAL);
+	lua_pushstring(L, BLOCK_LUA_TBLOCK_REGKEY);
+	lua_gettable(L, LUA_REGISTRYINDEX);
 	struct block_t_Block* tBlock = lua_touserdata(L, -1);
 
 	// Create timer
@@ -117,8 +120,9 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
 	luaJIT_setmode(L, 0, LUAJIT_MODE_ENGINE | LUAJIT_MODE_ON);
 
 	// Store tBlock in lua state
+	lua_pushstring(L, BLOCK_LUA_TBLOCK_REGKEY);
 	lua_pushlightuserdata(L, tBlock);
-	lua_setglobal(L, BLOCK_LUA_TBLOCK_GLOBAL);
+	lua_settable(L, LUA_REGISTRYINDEX);
 
 	// Add functions
 	lua_pushcfunction(L, lSetText);
