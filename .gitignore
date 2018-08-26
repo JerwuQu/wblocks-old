@@ -1,9 +1,4 @@
-*.ini
 *.dll
 *.log
-*.tmp
-*.suo
-*.user
-.vs/
 bin/
 obj/

@@ -1,6 +1,6 @@
 #include "block.h"
 #include "bar.h"
-#include "../../shared.h"
+#include "../shared/shared.h"
 
 #define BLOCK_EVENT_SETTEXT 1
 #define BLOCK_EVENT_SETCOLOR 2
@@ -8,7 +8,7 @@
 #define BLOCK_LUA_TIMER_INTERVAL 100
 
 static int blockCount = 0;
-static struct block_Block** blocks = NULL; 
+static struct block_Block** blocks = NULL;
 
 static int lSetText(lua_State* L)
 {
