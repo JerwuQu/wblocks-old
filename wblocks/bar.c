@@ -24,29 +24,38 @@ static HWND taskbarWnd = NULL;
 static int taskbarWidth, taskbarHeight;
 static COLORREF taskbarColor;
 
+static void printWin32Error()
+{
+    wchar_t buf[1024];
+    FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buf, 1024, NULL);
+    printf("%ls\n", buf);
+}
+
 static int loadResources()
 {
     // Get display DC
     displayDC = CreateDC("DISPLAY", NULL, NULL, NULL);
     if (!displayDC) {
-        log_text("Failed to get display dc!\n");
-        log_win32_error();
+        printf("Failed to get display dc!\n");
+        printWin32Error();
         return 1;
     }
 
     // Load cursor
     cursor = LoadCursor(NULL, IDC_ARROW);
     if (!cursor) {
-        log_text("Failed to load cursor!\n");
-        log_win32_error();
+        printf("Failed to load cursor!\n");
+        printWin32Error();
         return 1;
     }
 
     // Load font
+    // todo: don't use Open Sans, allow config to decide
     font = CreateFont(-16, 0, 0, 0, FW_NORMAL, 0, 0, 0, 0, 0, 0, 0, 0, "Open Sans");
     if (!font) {
-        log_text("Failed to load title font!\n");
-        log_win32_error();
+        printf("Failed to load title font!\n");
+        printWin32Error();
         return 1;
     }
 
@@ -67,13 +76,13 @@ static HWND getTaskbar()
 {
     HWND temp = FindWindow("Shell_TrayWnd", NULL);
     if (!temp) {
-        log_text("Failed to find Shell_TrayWnd\n");
+        printf("Failed to find Shell_TrayWnd\n");
         return 0;
     }
 
     temp = FindWindowEx(temp, NULL, "ReBarWindow32", NULL);
     if (!temp) {
-        log_text("Failed to find ReBarWindow32\n");
+        printf("Failed to find ReBarWindow32\n");
         return 0;
     }
 
@@ -123,29 +132,29 @@ static int injectHook()
 
     dll = LoadLibraryA("wblocks-dll.dll");
     if (!dll) {
-        log_text("DLL failed to load!\n");
-        log_win32_error();
+        printf("DLL failed to load!\n");
+        printWin32Error();
         return 1;
     }
 
     HOOKPROC addr = (HOOKPROC)GetProcAddress(dll, "wndProcHook");
     if (!addr) {
-        log_text("DLL function not found!\n");
-        log_win32_error();
+        printf("DLL function not found!\n");
+        printWin32Error();
         return 1;
     }
 
     DWORD tid = GetWindowThreadProcessId(taskbarWnd, 0);
     if (!tid) {
-        log_text("Window Thread ID not found!\n");
-        log_win32_error();
+        printf("Window Thread ID not found!\n");
+        printWin32Error();
         return 1;
     }
 
     hook = SetWindowsHookEx(WH_CALLWNDPROC, addr, dll, tid);
     if (!hook) {
-        log_text("WH_CALLWNDPROC hook failed!\n");
-        log_win32_error();
+        printf("WH_CALLWNDPROC hook failed!\n");
+        printWin32Error();
         return 1;
     }
 
@@ -193,7 +202,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
     } else if (msg == WM_LBUTTONDOWN) {
         RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
-        log_text("down\n");
+        printf("down\n");
     } else if (msg == WBLOCKS_WM_PONG) {
         lastPong = time(0);
     } else if (msg == WBLOCKS_WM_SIZE) {
@@ -214,8 +223,8 @@ static int registerClass()
     wc.lpszClassName = WBLOCKS_BAR_CLASS;
     wc.hCursor = cursor;
     if (!RegisterClassEx(&wc)) {
-        log_text("Failed to register bar class!\n");
-        log_win32_error();
+        printf("Failed to register bar class!\n");
+        printWin32Error();
         return 1;
     }
 
@@ -227,8 +236,8 @@ static int createWindow()
     // Create notification window
     barWnd = CreateWindowEx(WS_EX_LAYERED, WBLOCKS_BAR_CLASS, "", 0, 0, 0, 0, 0, 0, 0, 0, 0);
     if (!barWnd) {
-        log_text("Failed to create window!\n");
-        log_win32_error();
+        printf("Failed to create window!\n");
+        printWin32Error();
         return 1;
     }
 
@@ -257,7 +266,7 @@ static VOID CALLBACK aliveTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWOR
 {
     // Check when we got last pong
     if (time(0) - lastPong >= HOOK_DEAD_TIME) {
-        log_text("Bar dead!\n");
+        printf("Bar dead!\n");
         if (barWnd == NULL) {
             createWindow();
         } else {

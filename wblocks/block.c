@@ -134,6 +134,7 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
 
     // Load script
     if (luaL_dofile(L, tBlock->scriptPath)) {
+        lua_close(L);
         printf("Lua error: %s\n", lua_tostring(L, -1));
         return 1;
     }
@@ -170,8 +171,7 @@ struct block_Block* block_addScriptBlock(char* scriptPath)
     tBlock->timer.prev = &tBlock->timer;
     tBlock->scriptPath = _strdup(scriptPath);
     if (!CreateThread(NULL, 0, threadProc, tBlock, 0, &bBlock->threadId)) {
-        log_text("Failed to create script thread!\n");
-        log_win32_error();
+        printf("Failed to create script thread!\n");
         free(bBlock);
         free(tBlock);
         free(tBlock->scriptPath);

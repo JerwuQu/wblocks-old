@@ -1,6 +1,5 @@
 #pragma once
 
-#include "log.h"
 #include "../shared/shared.h"
 
 #include <Windows.h>

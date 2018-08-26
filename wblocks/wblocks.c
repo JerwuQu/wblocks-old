@@ -20,8 +20,7 @@ static int loadBlocks()
     FILE* fp;
     fopen_s(&fp, "wblocks.cfg", "r");
     if (!fp) {
-        log_text("Failed to open 'wblocks.cfg'\n");
-        log_win32_error();
+        printf("Failed to open 'wblocks.cfg'\n");
         return 1;
     }
 
@@ -30,27 +29,22 @@ static int loadBlocks()
     while (1) {
         for (i = 0; i < sizeof(line); i++) {
             c = getc(fp);
-            if (c == EOF) {
-                line[i] = 0;
+            if (c == EOF || c == '\n') {
                 if (i > 0) {
+                    line[i] = 0;
                     if (line[0] == '>') {
                         block_addStaticBlock(&line[1], i - 1);
                     } else {
                         block_addScriptBlock(line);
                     }
                 }
-                fclose(fp);
-                return 0;
-            } else if (c == '\n') {
-                line[i] = 0;
-                if (i > 0) {
-                    if (line[0] == '>') {
-                        block_addStaticBlock(&line[1], i - 1);
-                    } else {
-                        block_addScriptBlock(line);
-                    }
+
+                if (c == EOF) {
+                    fclose(fp);
+                    return 0;
+                } else {
+                    break;
                 }
-                break;
             } else {
                 line[i] = c;
             }
