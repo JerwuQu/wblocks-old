@@ -42,19 +42,18 @@ struct block_Block
     COLORREF color;
 };
 
-enum block_EventType
+enum block_ModifyEventType
 {
-    BLOCK_EVENT_NONE,       // none
-    BLOCK_EVENT_SETTEXT,    // to bar
-    BLOCK_EVENT_SETCOLOR,   // to bar
-    BLOCK_EVENT_MOUSE_DOWN  // to script
+    BLOCK_MEVENT_NONE,
+    BLOCK_MEVENT_SETTEXT,
+    BLOCK_MEVENT_SETCOLOR,
+    BLOCK_MEVENT_MOUSE_DOWN
 };
 
-// todo: use separate struct for script events
-struct block_Event
+struct block_ModifyEvent
 {
     int blockId;
-    enum block_EventType type;
+    enum block_ModifyEventType type;
 
     union
     {
@@ -68,8 +67,19 @@ struct block_Event
     };
 };
 
+enum block_InteractEventType
+{
+    BLOCK_IEVENT_NONE,
+    BLOCK_IEVENT_MOUSE_DOWN
+};
+
+struct block_InteractEvent
+{
+    enum block_InteractEventType type;
+};
+
 struct block_Block* block_addScriptBlock(char* scriptPath);
 struct block_Block* block_addStaticBlock(char* str, int len);
-void block_barEventHandler(struct block_Event* event);
+void block_barEventHandler(struct block_ModifyEvent* event);
 int block_getBlockCount();
 struct block_Block** block_getBlocks();

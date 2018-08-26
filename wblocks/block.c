@@ -20,13 +20,13 @@ static int lSetText(lua_State* L)
     if (!lua_isstring(L, 1)) return luaL_argerror(L, 1, "not a string");
 
     // Create event
-    struct block_Event* event = malloc(sizeof(struct block_Event));
+    struct block_ModifyEvent* event = malloc(sizeof(struct block_ModifyEvent));
     event->blockId = getBlockThreadData(L)->blockId;
-    event->type = BLOCK_EVENT_SETTEXT;
+    event->type = BLOCK_MEVENT_SETTEXT;
     event->wstr = strWiden(lua_tostring(L, 1), (int)lua_strlen(L, 1), &event->wstrlen);
 
     // Send event and abandon ownership over struct
-    PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_BAR_EVENT, 0, (LPARAM)event);
+    PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_MODIFY_EVENT, 0, (LPARAM)event);
 
     return 0;
 }
@@ -38,13 +38,13 @@ static int lSetColor(lua_State* L)
     if (!lua_isnumber(L, 3)) return luaL_argerror(L, 3, "not a number");
 
     // Create event
-    struct block_Event* event = malloc(sizeof(struct block_Event));
+    struct block_ModifyEvent* event = malloc(sizeof(struct block_ModifyEvent));
     event->blockId = getBlockThreadData(L)->blockId;
-    event->type = BLOCK_EVENT_SETCOLOR;
+    event->type = BLOCK_MEVENT_SETCOLOR;
     event->color = RGB(lua_tointeger(L, 1) & 0xFF, lua_tointeger(L, 2) & 0xFF, lua_tointeger(L, 3) & 0xFF);
 
     // Send event and abandon ownership over struct
-    PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_BAR_EVENT, 0, (LPARAM)event);
+    PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_MODIFY_EVENT, 0, (LPARAM)event);
 
     return 0;
 }
@@ -100,15 +100,30 @@ static void scriptTimerHandler(struct block_BlockThreadData* threadData)
     }
 }
 
-static void scriptEventHandler(struct block_Event* event, struct block_BlockThreadData* threadData)
+// todo: allow for variable amount of arguments for the call
+static void scriptBlockEventCall(lua_State* L, char* name)
 {
-    if (event->type == BLOCK_EVENT_MOUSE_DOWN) {
-        lua_getglobal(threadData->L, "block");      // todo: make sure exists
-        lua_pushstring(threadData->L, "mousedown"); // todo: make sure exists
-        lua_gettable(threadData->L, -2);
-        if (lua_pcall(threadData->L, 0, 0, 0)) {
-            printf("Lua error: %s\n", lua_tostring(threadData->L, -1));
+    lua_getglobal(L, "block");
+    if (lua_istable(L, -1)) {
+        lua_pushstring(L, name);
+        lua_gettable(L, -2);
+        if (lua_isfunction(L, -1)) {
+            if (lua_pcall(L, 0, 0, 0)) {
+                printf("Lua error: %s\n", lua_tostring(L, -1));
+            }
+            lua_pop(L, 1);
+        } else {
+            lua_pop(L, 2);
         }
+    } else {
+        lua_pop(L, 1);
+    }
+}
+
+static void scriptEventHandler(struct block_InteractEvent* event, struct block_BlockThreadData* threadData)
+{
+    if (event->type == BLOCK_IEVENT_MOUSE_DOWN) {
+        scriptBlockEventCall(threadData->L, "mousedown");
     }
 
     free(event);
@@ -158,8 +173,8 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
     while (GetMessage(&message, NULL, 0, 0)) {
         if (message.message == WM_TIMER) {
             scriptTimerHandler(threadData);
-        } else if (message.message == WBLOCKS_WM_BLOCK_SCRIPT_EVENT) {
-            struct block_Event* event = (struct block_Event*)message.lParam;
+        } else if (message.message == WBLOCKS_WM_BLOCK_INTERACT_EVENT) {
+            struct block_InteractEvent* event = (struct block_InteractEvent*)message.lParam;
             scriptEventHandler(event, threadData);
         }
     }
@@ -221,12 +236,12 @@ struct block_Block* block_addStaticBlock(char* str, int len)
     return block;
 }
 
-void block_barEventHandler(struct block_Event* event)
+void block_barEventHandler(struct block_ModifyEvent* event)
 {
     if (event->blockId < 0 || event->blockId >= blockCount) return; // Block doesn't exist
     struct block_Block* block = blocks[event->blockId];
 
-    if (event->type == BLOCK_EVENT_SETTEXT) {
+    if (event->type == BLOCK_MEVENT_SETTEXT) {
         if (block->text.wlen != event->wstrlen || memcmp(block->text.wstr, event->wstr, event->wstrlen * sizeof(wchar_t))) {
             free(block->text.wstr);
             block->text.wstr = event->wstr;
@@ -235,7 +250,7 @@ void block_barEventHandler(struct block_Event* event)
         } else {
             free(event->wstr);
         }
-    } else if (event->type == BLOCK_EVENT_SETCOLOR) {
+    } else if (event->type == BLOCK_MEVENT_SETCOLOR) {
         if (block->color != event->color) {
             block->color = event->color;
             bar_redraw();

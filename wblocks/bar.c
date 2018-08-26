@@ -214,11 +214,11 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             if (mx >= blocks[i]->bar_xpos && mx < blocks[i]->bar_xpos + blocks[i]->bar_width) {
                 if (blocks[i]->blockIsScripted) {
                     // Create event
-                    struct block_Event* event = malloc(sizeof(struct block_Event));
-                    event->type = BLOCK_EVENT_MOUSE_DOWN;
+                    struct block_InteractEvent* event = malloc(sizeof(struct block_InteractEvent));
+                    event->type = BLOCK_IEVENT_MOUSE_DOWN;
 
                     // Send event and abandon ownership over struct
-                    PostThreadMessage(blocks[i]->scriptThreadId, WBLOCKS_WM_BLOCK_SCRIPT_EVENT, 0, (LPARAM)event);
+                    PostThreadMessage(blocks[i]->scriptThreadId, WBLOCKS_WM_BLOCK_INTERACT_EVENT, 0, (LPARAM)event);
                 }
                 break;
             }
