@@ -4,6 +4,7 @@
 
 #include <time.h>
 #include <Windows.h>
+#include <Windowsx.h>
 
 #define BAR_TEXT_FLAGS (DT_NOCLIP | DT_NOPREFIX | DT_SINGLELINE | DT_RIGHT | DT_VCENTER)
 #define HOOK_PING_TIME 1
@@ -195,6 +196,8 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             DrawTextW(hdc, blocks[i]->text.wstr, blocks[i]->text.wlen, &drawRect, BAR_TEXT_FLAGS);
             GetTextExtentPoint32W(hdc, blocks[i]->text.wstr, blocks[i]->text.wlen, &textSize);
             drawRect.right -= textSize.cx;
+            blocks[i]->bar_xpos = drawRect.right;
+            blocks[i]->bar_width = textSize.cx;
         }
 
         // End
@@ -202,7 +205,24 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
     } else if (msg == WM_LBUTTONDOWN) {
         RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
-        printf("down\n");
+
+        // Find affected block
+        int mx = GET_X_LPARAM(lParam);
+        struct block_Block** blocks = block_getBlocks();
+        int blockCount = block_getBlockCount();
+        for (int i = 0; i < blockCount; i++) {
+            if (mx >= blocks[i]->bar_xpos && mx < blocks[i]->bar_xpos + blocks[i]->bar_width) {
+                if (blocks[i]->blockIsScripted) {
+                    // Create event
+                    struct block_Event* event = malloc(sizeof(struct block_Event));
+                    event->type = BLOCK_EVENT_MOUSE_DOWN;
+
+                    // Send event and abandon ownership over struct
+                    PostThreadMessage(blocks[i]->scriptThreadId, WBLOCKS_WM_BLOCK_SCRIPT_EVENT, 0, (LPARAM)event);
+                }
+                break;
+            }
+        }
     } else if (msg == WBLOCKS_WM_PONG) {
         lastPong = time(0);
     } else if (msg == WBLOCKS_WM_SIZE) {

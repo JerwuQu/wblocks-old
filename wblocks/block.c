@@ -100,6 +100,20 @@ static void scriptTimerHandler(struct block_BlockThreadData* threadData)
     }
 }
 
+static void scriptEventHandler(struct block_Event* event, struct block_BlockThreadData* threadData)
+{
+    if (event->type == BLOCK_EVENT_MOUSE_DOWN) {
+        lua_getglobal(threadData->L, "block");      // todo: make sure exists
+        lua_pushstring(threadData->L, "mousedown"); // todo: make sure exists
+        lua_gettable(threadData->L, -2);
+        if (lua_pcall(threadData->L, 0, 0, 0)) {
+            printf("Lua error: %s\n", lua_tostring(threadData->L, -1));
+        }
+    }
+
+    free(event);
+}
+
 static DWORD WINAPI threadProc(LPVOID lpParameter)
 {
     struct block_BlockThreadData* threadData = (struct block_BlockThreadData*)lpParameter;
@@ -115,12 +129,19 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
     lua_settable(L, LUA_REGISTRYINDEX);
 
     // Add functions
-    lua_pushcfunction(L, lSetText);
-    lua_setglobal(L, "SetText");
-    lua_pushcfunction(L, lSetColor);
-    lua_setglobal(L, "SetColor");
-    lua_pushcfunction(L, lAddTimer);
-    lua_setglobal(L, "AddTimer");
+    lua_newtable(L);
+        lua_pushstring(L, "setText");
+        lua_pushcfunction(L, lSetText);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "setColor");
+        lua_pushcfunction(L, lSetColor);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "addTimer");
+        lua_pushcfunction(L, lAddTimer);
+        lua_settable(L, -3);
+    lua_setglobal(L, "block");
 
     // Load script
     if (luaL_dofile(L, threadData->scriptPath)) {
@@ -137,6 +158,9 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
     while (GetMessage(&message, NULL, 0, 0)) {
         if (message.message == WM_TIMER) {
             scriptTimerHandler(threadData);
+        } else if (message.message == WBLOCKS_WM_BLOCK_SCRIPT_EVENT) {
+            struct block_Event* event = (struct block_Event*)message.lParam;
+            scriptEventHandler(event, threadData);
         }
     }
 
@@ -171,6 +195,7 @@ struct block_Block* block_addScriptBlock(char* scriptPath)
 {
     printf("Loading: %s\n", scriptPath);
     struct block_Block* block = createBlockBase();
+    block->blockIsScripted = 1;
 
     // Create thread data
     struct block_BlockThreadData* threadData = malloc(sizeof(struct block_BlockThreadData));
@@ -196,7 +221,7 @@ struct block_Block* block_addStaticBlock(char* str, int len)
     return block;
 }
 
-void block_eventHandler(struct block_Event* event)
+void block_barEventHandler(struct block_Event* event)
 {
     if (event->blockId < 0 || event->blockId >= blockCount) return; // Block doesn't exist
     struct block_Block* block = blocks[event->blockId];

@@ -1,13 +1,17 @@
 function a()
-    SetText("a")
-    SetColor(255, 0, 0)
-    AddTimer(1000, b)
+    block.setText("a")
+    block.setColor(255, 0, 0)
+    block.addTimer(1000, b)
 end
 
 function b()
-    SetText("b")
-    SetColor(0, 255, 0)
-    AddTimer(1000, a)
+    block.setText("b")
+    block.setColor(0, 255, 0)
+    block.addTimer(1000, a)
+end
+
+function block.mousedown()
+    print("Mouse pressed!")
 end
 
 a()
