@@ -22,29 +22,35 @@ struct ltimer
 };
 
 // Only to be accessed from script thread after creation
-struct block_t_Block
+struct block_BlockThreadData
 {
     int blockId;
     char* scriptPath;
     lua_State* L;
-    struct ltimer timer;
+    struct ltimer timerRoot;
 };
 
-// Only to be accessed from bar/main thread
+// _NOT_ to be accessed from script thread
 struct block_Block
 {
     int blockId;
-    DWORD threadId;
-    struct block_t_Block* tBlock;
+    DWORD scriptThreadId;
 
     struct wtext text;
     COLORREF color;
 };
 
+enum block_EventType
+{
+    BLOCK_EVENT_NONE,
+    BLOCK_EVENT_SETTEXT,
+    BLOCK_EVENT_SETCOLOR
+};
+
 struct block_Event
 {
     int blockId;
-    int type;
+    enum block_EventType type;
 
     union
     {
@@ -58,7 +64,7 @@ struct block_Event
     };
 };
 
-struct block_Block* block_addScriptBlock(char* scriptBlock);
+struct block_Block* block_addScriptBlock(char* scriptPath);
 struct block_Block* block_addStaticBlock(char* str, int len);
 void block_eventHandler(struct block_Event* event);
 int block_getBlockCount();

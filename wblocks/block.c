@@ -2,31 +2,31 @@
 #include "bar.h"
 #include "../shared/shared.h"
 
-#define BLOCK_EVENT_SETTEXT 1
-#define BLOCK_EVENT_SETCOLOR 2
-#define BLOCK_LUA_TBLOCK_REGKEY "WBLOCKS_TBLOCK_PTR"
 #define BLOCK_LUA_TIMER_INTERVAL 100
 
+static char BLOCK_THREAD_DATA_REGKEY;
 static int blockCount = 0;
 static struct block_Block** blocks = NULL;
+
+static inline struct block_BlockThreadData* getBlockThreadData(lua_State* L)
+{
+    lua_pushlightuserdata(L, &BLOCK_THREAD_DATA_REGKEY);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    return lua_touserdata(L, -1);
+}
 
 static int lSetText(lua_State* L)
 {
     if (!lua_isstring(L, 1)) return luaL_argerror(L, 1, "not a string");
 
-    // Get tBlock
-    lua_pushstring(L, BLOCK_LUA_TBLOCK_REGKEY);
-    lua_gettable(L, LUA_REGISTRYINDEX);
-    struct block_t_Block* tBlock = lua_touserdata(L, -1);
-
     // Create event
     struct block_Event* event = malloc(sizeof(struct block_Event));
-    event->blockId = tBlock->blockId;
+    event->blockId = getBlockThreadData(L)->blockId;
     event->type = BLOCK_EVENT_SETTEXT;
     event->wstr = strWiden(lua_tostring(L, 1), (int)lua_strlen(L, 1), &event->wstrlen);
 
     // Send event and abandon ownership over struct
-    PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_EVENT, 0, (LPARAM)event);
+    PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_BAR_EVENT, 0, (LPARAM)event);
 
     return 0;
 }
@@ -37,19 +37,14 @@ static int lSetColor(lua_State* L)
     if (!lua_isnumber(L, 2)) return luaL_argerror(L, 2, "not a number");
     if (!lua_isnumber(L, 3)) return luaL_argerror(L, 3, "not a number");
 
-    // Get tBlock
-    lua_pushstring(L, BLOCK_LUA_TBLOCK_REGKEY);
-    lua_gettable(L, LUA_REGISTRYINDEX);
-    struct block_t_Block* tBlock = lua_touserdata(L, -1);
-
     // Create event
     struct block_Event* event = malloc(sizeof(struct block_Event));
-    event->blockId = tBlock->blockId;
+    event->blockId = getBlockThreadData(L)->blockId;
     event->type = BLOCK_EVENT_SETCOLOR;
     event->color = RGB(lua_tointeger(L, 1) & 0xFF, lua_tointeger(L, 2) & 0xFF, lua_tointeger(L, 3) & 0xFF);
 
     // Send event and abandon ownership over struct
-    PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_EVENT, 0, (LPARAM)event);
+    PostThreadMessage(WBLOCKS_MESSAGE_THREAD_ID, WBLOCKS_WM_BLOCK_BAR_EVENT, 0, (LPARAM)event);
 
     return 0;
 }
@@ -63,18 +58,13 @@ static int lAddTimer(lua_State* L)
     lua_pushvalue(L, 2);
     int ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    // Get tBlock
-    lua_pushstring(L, BLOCK_LUA_TBLOCK_REGKEY);
-    lua_gettable(L, LUA_REGISTRYINDEX);
-    struct block_t_Block* tBlock = lua_touserdata(L, -1);
-
     // Create timer
     struct ltimer* timer = malloc(sizeof(struct ltimer));
     timer->time = GetTickCount64() + lua_tointeger(L, 1);
     timer->luaRef = ref;
 
     // Place in timer list
-    struct ltimer* current = &tBlock->timer;
+    struct ltimer* current = &getBlockThreadData(L)->timerRoot;
     while (current->next && timer->time >= current->next->time) {
         current = current->next;
     }
@@ -87,19 +77,19 @@ static int lAddTimer(lua_State* L)
     return 0;
 }
 
-static void scriptTimerHandler(struct block_t_Block* tBlock)
+static void scriptTimerHandler(struct block_BlockThreadData* threadData)
 {
     // Process timers
     uint64_t time = GetTickCount64();
     struct ltimer* tmp;
-    struct ltimer* current = tBlock->timer.next;
+    struct ltimer* current = threadData->timerRoot.next;
     while (current && current->time <= time) {
         // Call timer
-        lua_rawgeti(tBlock->L, LUA_REGISTRYINDEX, current->luaRef);
-        if (lua_pcall(tBlock->L, 0, 0, 0)) {
-            printf("Lua error: %s\n", lua_tostring(tBlock->L, -1));
+        lua_rawgeti(threadData->L, LUA_REGISTRYINDEX, current->luaRef);
+        if (lua_pcall(threadData->L, 0, 0, 0)) {
+            printf("Lua error: %s\n", lua_tostring(threadData->L, -1));
         }
-        luaL_unref(tBlock->L, LUA_REGISTRYINDEX, current->luaRef);
+        luaL_unref(threadData->L, LUA_REGISTRYINDEX, current->luaRef);
 
         // Remove timer
         current->prev->next = current->next;
@@ -112,16 +102,16 @@ static void scriptTimerHandler(struct block_t_Block* tBlock)
 
 static DWORD WINAPI threadProc(LPVOID lpParameter)
 {
-    struct block_t_Block* tBlock = (struct block_t_Block*)lpParameter;
+    struct block_BlockThreadData* threadData = (struct block_BlockThreadData*)lpParameter;
 
-    // Create state
-    lua_State* L = tBlock->L = luaL_newstate();
-    luaL_openlibs(tBlock->L);
+    // Create lua state
+    lua_State* L = threadData->L = luaL_newstate();
+    luaL_openlibs(L);
     luaJIT_setmode(L, 0, LUAJIT_MODE_ENGINE | LUAJIT_MODE_ON);
 
-    // Store tBlock in lua state
-    lua_pushstring(L, BLOCK_LUA_TBLOCK_REGKEY);
-    lua_pushlightuserdata(L, tBlock);
+    // Store thread data ptr in lua state
+    lua_pushlightuserdata(L, &BLOCK_THREAD_DATA_REGKEY);
+    lua_pushlightuserdata(L, threadData);
     lua_settable(L, LUA_REGISTRYINDEX);
 
     // Add functions
@@ -133,9 +123,9 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
     lua_setglobal(L, "AddTimer");
 
     // Load script
-    if (luaL_dofile(L, tBlock->scriptPath)) {
-        lua_close(L);
+    if (luaL_dofile(L, threadData->scriptPath)) {
         printf("Lua error: %s\n", lua_tostring(L, -1));
+        lua_close(L);
         return 1;
     }
 
@@ -146,78 +136,83 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
     MSG message;
     while (GetMessage(&message, NULL, 0, 0)) {
         if (message.message == WM_TIMER) {
-            scriptTimerHandler(tBlock);
+            scriptTimerHandler(threadData);
         }
     }
 
     return 0;
 }
 
+static inline struct block_Block* createBlockBase()
+{
+    // Create bar block
+    struct block_Block* block = malloc(sizeof(struct block_Block));
+    memset(block, 0, sizeof(struct block_Block));
+    block->blockId = blockCount;
+    block->color = 0xffffff;
+
+    // Add to list
+    // todo: expand by factor of 2
+    blocks = realloc(blocks, (blockCount + 1) * sizeof(struct block_Block));
+    blocks[blockCount++] = block;
+    return block;
+}
+
+// Only to be used in case of error when creating block - never afterwards
+// todo: allow to be used afterwards as well
+//     + shrink "blocks" by factor of 2
+static inline struct block_Block* freeLastBlock()
+{
+    blockCount--;
+    free(blocks[blockCount]);
+}
+
 struct block_Block* block_addScriptBlock(char* scriptPath)
 {
     printf("Loading: %s\n", scriptPath);
+    struct block_Block* block = createBlockBase();
 
-    // Create bar block
-    struct block_Block* bBlock = malloc(sizeof(struct block_Block));
-    memset(bBlock, 0, sizeof(struct block_Block));
-    bBlock->blockId = blockCount;
-    bBlock->color = 0xffffff;
-
-    // Create thread block
-    struct block_t_Block* tBlock = malloc(sizeof(struct block_t_Block));
-    memset(tBlock, 0, sizeof(struct block_t_Block));
-    bBlock->tBlock = tBlock;
-    tBlock->blockId = blockCount;
-    tBlock->timer.prev = &tBlock->timer;
-    tBlock->scriptPath = _strdup(scriptPath);
-    if (!CreateThread(NULL, 0, threadProc, tBlock, 0, &bBlock->threadId)) {
+    // Create thread data
+    struct block_BlockThreadData* threadData = malloc(sizeof(struct block_BlockThreadData));
+    memset(threadData, 0, sizeof(struct block_BlockThreadData));
+    threadData->blockId = block->blockId;
+    threadData->timerRoot.prev = &threadData->timerRoot;
+    threadData->scriptPath = _strdup(scriptPath);
+    if (!CreateThread(NULL, 0, threadProc, threadData, 0, &block->scriptThreadId)) {
         printf("Failed to create script thread!\n");
-        free(bBlock);
-        free(tBlock);
-        free(tBlock->scriptPath);
+        freeLastBlock();
+        free(threadData);
+        free(threadData->scriptPath);
         return 0;
     }
 
-    // Add to list
-    blocks = realloc(blocks, (blockCount + 1) * sizeof(struct block_Block));
-    blocks[blockCount++] = bBlock;
-    return bBlock;
+    return block;
 }
 
 struct block_Block* block_addStaticBlock(char* str, int len)
 {
-    // Create bar block
-    struct block_Block* bBlock = malloc(sizeof(struct block_Block));
-    memset(bBlock, 0, sizeof(struct block_Block));
-    bBlock->blockId = blockCount;
-    bBlock->color = 0xffffff;
-
-    // Set string
-    bBlock->text.wstr = strWiden(str, len, &bBlock->text.wlen);
-
-    // Add to list
-    blocks = realloc(blocks, (blockCount + 1) * sizeof(struct block_Block));
-    blocks[blockCount++] = bBlock;
-    return bBlock;
+    struct block_Block* block = createBlockBase();
+    block->text.wstr = strWiden(str, len, &block->text.wlen);
+    return block;
 }
 
 void block_eventHandler(struct block_Event* event)
 {
-    if (event->blockId >= blockCount) return; // Block doesn't exist anymore
-    struct block_Block* bBlock = blocks[event->blockId];
+    if (event->blockId < 0 || event->blockId >= blockCount) return; // Block doesn't exist
+    struct block_Block* block = blocks[event->blockId];
 
     if (event->type == BLOCK_EVENT_SETTEXT) {
-        if (bBlock->text.wlen != event->wstrlen || memcmp(bBlock->text.wstr, event->wstr, event->wstrlen * sizeof(wchar_t))) {
-            free(bBlock->text.wstr);
-            bBlock->text.wstr = event->wstr;
-            bBlock->text.wlen = event->wstrlen;
+        if (block->text.wlen != event->wstrlen || memcmp(block->text.wstr, event->wstr, event->wstrlen * sizeof(wchar_t))) {
+            free(block->text.wstr);
+            block->text.wstr = event->wstr;
+            block->text.wlen = event->wstrlen;
             bar_redraw();
         } else {
             free(event->wstr);
         }
     } else if (event->type == BLOCK_EVENT_SETCOLOR) {
-        if (bBlock->color != event->color) {
-            bBlock->color = event->color;
+        if (block->color != event->color) {
+            block->color = event->color;
             bar_redraw();
         }
     }

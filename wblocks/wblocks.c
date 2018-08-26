@@ -73,7 +73,7 @@ int main()
         DispatchMessage(&message);
 
         // Handle block events
-        if (message.hwnd == NULL && message.message == WBLOCKS_WM_BLOCK_EVENT) {
+        if (message.hwnd == NULL && message.message == WBLOCKS_WM_BLOCK_BAR_EVENT) {
             struct block_Event* event = (struct block_Event*)message.lParam;
             block_eventHandler(event);
         }
