@@ -1,3 +1,6 @@
 [submodule "LuaJIT"]
 	path = ext/LuaJIT
 	url = https://github.com/LuaJIT/LuaJIT.git
+[submodule "ext/tomlc99"]
+	path = ext/tomlc99
+	url = https://github.com/cktan/tomlc99

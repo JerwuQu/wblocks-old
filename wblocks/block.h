@@ -79,7 +79,7 @@ struct block_InteractEvent
 };
 
 struct block_Block* block_addScriptBlock(char* scriptPath);
-struct block_Block* block_addStaticBlock(char* str, int len);
+struct block_Block* block_addStaticBlock(char* str);
 void block_barEventHandler(struct block_ModifyEvent* event);
 int block_getBlockCount();
 struct block_Block** block_getBlocks();

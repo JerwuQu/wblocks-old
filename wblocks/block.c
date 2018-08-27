@@ -200,7 +200,7 @@ static inline struct block_Block* createBlockBase()
 // Only to be used in case of error when creating block - never afterwards
 // todo: allow to be used afterwards as well
 //     + shrink "blocks" by factor of 2
-static inline struct block_Block* freeLastBlock()
+static inline void freeLastBlock()
 {
     blockCount--;
     free(blocks[blockCount]);
@@ -229,10 +229,10 @@ struct block_Block* block_addScriptBlock(char* scriptPath)
     return block;
 }
 
-struct block_Block* block_addStaticBlock(char* str, int len)
+struct block_Block* block_addStaticBlock(char* str)
 {
     struct block_Block* block = createBlockBase();
-    block->text.wstr = strWiden(str, len, &block->text.wlen);
+    block->text.wstr = strWiden(str, strlen(str), &block->text.wlen);
     return block;
 }
 

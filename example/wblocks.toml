@@ -1,0 +1,8 @@
+[[block]]
+text = " | "
+
+[[block]]
+script = "example.lua"
+
+[[block]]
+text = " | "

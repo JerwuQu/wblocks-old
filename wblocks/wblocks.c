@@ -1,6 +1,7 @@
 #include "bar.h"
 #include "wblocks.h"
 #include "block.h"
+#include "../ext/tomlc99/toml.h"
 
 #include <stdlib.h>
 #include <Windows.h>
@@ -17,39 +18,60 @@ wchar_t* strWiden(const char* inStr, int inLen, int* outLen)
 
 static int loadBlocks()
 {
+    // Read file
     FILE* fp;
-    fopen_s(&fp, "wblocks.cfg", "r");
+    fopen_s(&fp, "wblocks.toml", "r");
     if (!fp) {
-        printf("Failed to open 'wblocks.cfg'\n");
+        printf("Failed to open 'wblocks.toml'\n");
         return 1;
     }
 
-    int i, c;
-    char line[1024] = { 0 };
-    while (1) {
-        for (i = 0; i < sizeof(line); i++) {
-            c = getc(fp);
-            if (c == EOF || c == '\n') {
-                if (i > 0) {
-                    line[i] = 0;
-                    if (line[0] == '>') {
-                        block_addStaticBlock(&line[1], i - 1);
-                    } else {
-                        block_addScriptBlock(line);
-                    }
-                }
+    // Parse toml
+    char tomlErr[1024];
+    toml_table_t* toml = toml_parse_file(fp, tomlErr, sizeof(tomlErr));
+    fclose(fp);
+    if (!toml) {
+        printf("Failed to parse 'wblocks.toml': %s\n", tomlErr);
+        return 1;
+    }
 
-                if (c == EOF) {
-                    fclose(fp);
-                    return 0;
-                } else {
-                    break;
-                }
-            } else {
-                line[i] = c;
+    toml_array_t* blocks = toml_array_in(toml, "block");
+    if (!blocks) {
+        printf("Failed to parse 'wblocks.toml': Invalid block array\n");
+        toml_free(toml);
+        return 1;
+    }
+
+    // Parse block array
+    char* str;
+    const char* raw;
+    toml_table_t* block;
+    for (int i = 0; (block = toml_table_at(blocks, i)); i++) {
+        if (raw = toml_raw_in(block, "text")) {
+            if (toml_rtos(raw, &str)) {
+                printf("Failed to parse 'wblocks.toml': Invalid block text\n");
+                toml_free(toml);
+                return 1;
             }
+            block_addStaticBlock(str);
+            free(str);
+        } else if (raw = toml_raw_in(block, "script")) {
+            if (toml_rtos(raw, &str)) {
+                printf("Failed to parse 'wblocks.toml': Invalid block script\n");
+                toml_free(toml);
+                return 1;
+            }
+            block_addScriptBlock(str);
+            free(str);
+        } else {
+            printf("Failed to parse 'wblocks.toml': No block text source\n");
+            toml_free(toml);
+            return 1;
         }
     }
+    toml_free(toml);
+
+    return 0;
 }
 
 int main()
