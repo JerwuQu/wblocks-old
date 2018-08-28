@@ -69,44 +69,76 @@ static int toml_table_color(toml_table_t* table, char* key, COLORREF* out)
 static int loadBlock(toml_table_t* block)
 {
     // Create style
-    struct block_BlockStyle style = { 0 };
-    style.color = 0xffffff;
-    style.textAlign = BLOCK_ALIGN_CENTER;
+    struct block_BlockStyle* style = malloc(sizeof(struct block_BlockStyle));
+    memset(style, 0, sizeof(struct block_BlockStyle));
+    style->color = 0xffffff;
+    style->textAlign = BLOCK_ALIGN_CENTER;
 
-    // Get style info from config
+    // Get font properties
+    const char* raw;
+    int64_t fontSize = -16;
+    if (raw = toml_raw_in(block, "font_size")) {
+        if (toml_rtoi(raw, &fontSize)) {
+            printf("Failed to parse 'wblocks.toml': Invalid integer for font_size\n");
+            return 1;
+        }
+    }
+
     char* str;
+    if (str = toml_table_string(block, "font")) {
+        style->font = CreateFont((int)fontSize, 0, 0, 0, FW_NORMAL, 0, 0, 0, 0, 0, 0, 0, 0, str);
+        if (!style->font) {
+            printf("Failed to load font '%s'!\n", str);
+            free(style);
+            return 1;
+        }
+        free(str);
+    } else {
+        style->font = CreateFont((int)fontSize, 0, 0, 0, FW_NORMAL, 0, 0, 0, 0, 0, 0, 0, 0, "Arial");
+        if (!style->font) {
+            printf("Failed to load default font 'Arial'!\n");
+            free(style);
+            return 1;
+        }
+    }
+
+    // Get default text
     if (str = toml_table_string(block, "text")) {
-        style.text.wstr = strWiden(str, (int)strlen(str), &style.text.wlen);
+        style->text.wstr = strWiden(str, (int)strlen(str), &style->text.wlen);
         free(str);
     }
 
+    // Text min width
     if (str = toml_table_string(block, "min_width")) {
-        style.minWidthStr.wstr = strWiden(str, (int)strlen(str), &style.minWidthStr.wlen);
+        style->minWidthStr.wstr = strWiden(str, (int)strlen(str), &style->minWidthStr.wlen);
         free(str);
     }
 
+    // Text alignment
     if (str = toml_table_string(block, "align")) {
         if (!strcmp(str, "left")) {
-            style.textAlign = BLOCK_ALIGN_LEFT;
+            style->textAlign = BLOCK_ALIGN_LEFT;
         } else if (!strcmp(str, "center")) {
-            style.textAlign = BLOCK_ALIGN_CENTER;
+            style->textAlign = BLOCK_ALIGN_CENTER;
         } else if (!strcmp(str, "right")) {
-            style.textAlign = BLOCK_ALIGN_RIGHT;
+            style->textAlign = BLOCK_ALIGN_RIGHT;
         } else {
             printf("Failed to parse 'wblocks.toml': Invalid text align! Valid values: [left, center, right]\n");
         }
         free(str);
     }
 
-    toml_table_color(block, "color", &style.color);
+    // Default text color
+    toml_table_color(block, "color", &style->color);
 
     // Finally, create block using text source
     if (str = toml_table_string(block, "script")) {
-        block_addScriptBlock(str, &style);
+        block_addScriptBlock(str, style);
         free(str);
-    } else if (style.text.wlen) {
-        block_addStaticBlock(&style);
+    } else if (style->text.wlen) {
+        block_addStaticBlock(style);
     } else {
+        free(style);
         printf("Failed to parse 'wblocks.toml': No block text source\n");
         return 1;
     }

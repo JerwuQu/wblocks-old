@@ -182,6 +182,7 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
     return 0;
 }
 
+// Abandon ownership of style to create a blcok
 static inline struct block_Block* createBlockBase(struct block_BlockStyle* style)
 {
     // Create block
@@ -190,9 +191,7 @@ static inline struct block_Block* createBlockBase(struct block_BlockStyle* style
     block->blockId = blockCount;
 
     // Copy style
-    memcpy(&block->style, style, sizeof(struct block_BlockStyle));
-    block->style.text.wstr = _wcsdup(style->text.wstr);
-    block->style.minWidthStr.wstr = _wcsdup(style->minWidthStr.wstr);
+    block->style = style;
 
     // Add to list
     // todo: expand by factor of 2
@@ -201,14 +200,21 @@ static inline struct block_Block* createBlockBase(struct block_BlockStyle* style
     return block;
 }
 
+static inline void freeBlockStyle(struct block_BlockStyle* style)
+{
+    free(style->text.wstr);
+    DeleteObject(style->font);
+    free(style->minWidthStr.wstr);
+    free(style);
+}
+
 // Only to be used in case of error when creating block - never afterwards
 // todo: make this a proper function to remove any block
 //     + shrink "blocks" by factor of 2
 static inline void freeLastBlock()
 {
     blockCount--;
-    free(blocks[blockCount]->style.text.wstr);
-    free(blocks[blockCount]->style.minWidthStr.wstr);
+    freeBlockStyle(blocks[blockCount]->style);
     free(blocks[blockCount]);
 }
 
@@ -227,8 +233,8 @@ struct block_Block* block_addScriptBlock(char* scriptPath, struct block_BlockSty
     if (!CreateThread(NULL, 0, threadProc, threadData, 0, &block->scriptThreadId)) {
         printf("Failed to create script thread!\n");
         freeLastBlock();
-        free(threadData);
         free(threadData->scriptPath);
+        free(threadData);
         return 0;
     }
 
@@ -246,17 +252,17 @@ void block_barEventHandler(struct block_ModifyEvent* event)
     struct block_Block* block = blocks[event->blockId];
 
     if (event->type == BLOCK_MEVENT_SETTEXT) {
-        if (block->style.text.wlen != event->wstrlen || memcmp(block->style.text.wstr, event->wstr, event->wstrlen * sizeof(wchar_t))) {
-            free(block->style.text.wstr);
-            block->style.text.wstr = event->wstr;
-            block->style.text.wlen = event->wstrlen;
+        if (block->style->text.wlen != event->wstrlen || memcmp(block->style->text.wstr, event->wstr, event->wstrlen * sizeof(wchar_t))) {
+            free(block->style->text.wstr);
+            block->style->text.wstr = event->wstr;
+            block->style->text.wlen = event->wstrlen;
             bar_redraw();
         } else {
             free(event->wstr);
         }
     } else if (event->type == BLOCK_MEVENT_SETCOLOR) {
-        if (block->style.color != event->color) {
-            block->style.color = event->color;
+        if (block->style->color != event->color) {
+            block->style->color = event->color;
             bar_redraw();
         }
     }

@@ -8,9 +8,13 @@ min_width = "example"
 script = "example.lua"
 align = "center"
 min_width = "example"
+font = "Comic Sans MS"
+font_size = 24
 
 [[block]]
 text = " | "
 color = [0, 255, 255]
 align = "left"
 min_width = "example"
+font = "Arial"
+font_size = 14

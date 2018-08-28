@@ -40,8 +40,9 @@ enum block_BlockTextAlign
 struct block_BlockStyle
 {
     struct wtext text;
-    enum block_BlockTextAlign textAlign;
+    HFONT font;
     COLORREF color;
+    enum block_BlockTextAlign textAlign;
     struct wtext minWidthStr;
 };
 
@@ -49,7 +50,7 @@ struct block_BlockStyle
 struct block_Block
 {
     int blockId;
-    struct block_BlockStyle style;
+    struct block_BlockStyle* style;
 
     char blockIsScripted;
     DWORD scriptThreadId;

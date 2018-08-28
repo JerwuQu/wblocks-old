@@ -12,7 +12,6 @@
 #define BAR_WIDTH 500
 
 static HCURSOR cursor = NULL;
-static HFONT font = NULL;
 static HDC displayDC = NULL;
 
 static HMODULE dll = NULL;
@@ -51,15 +50,6 @@ static int loadResources()
         return 1;
     }
 
-    // Load font
-    // todo: don't use Open Sans, allow config to decide
-    font = CreateFont(-16, 0, 0, 0, FW_NORMAL, 0, 0, 0, 0, 0, 0, 0, 0, "Open Sans");
-    if (!font) {
-        printf("Failed to load title font!\n");
-        printWin32Error();
-        return 1;
-    }
-
     return 0;
 }
 
@@ -69,8 +59,6 @@ static void freeResources()
     displayDC = NULL;
     DestroyCursor(cursor);
     cursor = NULL;
-    DeleteObject(font);
-    font = NULL;
 }
 
 static HWND findTaskbar()
@@ -185,7 +173,6 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
         // Draw text
         SetBkMode(hdc, TRANSPARENT);
-        SelectObject(hdc, font);
 
         // Get blocks
         struct block_Block** blocks = block_getBlocks();
@@ -193,28 +180,29 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         SIZE textSize;
         for (int i = blockCount - 1; i >= 0; i--) {
             struct block_Block* block = blocks[i];
-            SetTextColor(hdc, block->style.color);
+            SelectObject(hdc, block->style->font);
+            SetTextColor(hdc, block->style->color);
 
             // Get minimum width
             int minWidth = 0;
-            GetTextExtentPoint32W(hdc, block->style.minWidthStr.wstr, block->style.minWidthStr.wlen, &textSize);
+            GetTextExtentPoint32W(hdc, block->style->minWidthStr.wstr, block->style->minWidthStr.wlen, &textSize);
             minWidth = textSize.cx;
 
             // Get actual width
-            GetTextExtentPoint32W(hdc, block->style.text.wstr, block->style.text.wlen, &textSize);
+            GetTextExtentPoint32W(hdc, block->style->text.wstr, block->style->text.wlen, &textSize);
             int textWidth = textSize.cx;
             int width = textWidth > minWidth ? textWidth : minWidth;
 
             // Draw text
             int xoffset = 0;
-            if (block->style.textAlign == BLOCK_ALIGN_LEFT) {
+            if (block->style->textAlign == BLOCK_ALIGN_LEFT) {
                 xoffset = textWidth - width;
                 drawRect.right += xoffset;
-            } else if (block->style.textAlign == BLOCK_ALIGN_CENTER) {
+            } else if (block->style->textAlign == BLOCK_ALIGN_CENTER) {
                 xoffset = (textWidth - width) / 2;
                 drawRect.right += xoffset;
             }
-            DrawTextW(hdc, block->style.text.wstr, block->style.text.wlen, &drawRect, BAR_TEXT_FLAGS);
+            DrawTextW(hdc, block->style->text.wstr, block->style->text.wlen, &drawRect, BAR_TEXT_FLAGS);
 
             // Reset x offset and move rect
             drawRect.right -= width + xoffset;
