@@ -1,5 +1,7 @@
-# wblocks
+# wblocks [![Build status](https://ci.appveyor.com/api/projects/status/31wd4fkq447te2yp?svg=true)](https://ci.appveyor.com/project/jerwuqu/wblocks)
 A taskbar thingy
+
+Download the [latest build](https://ci.appveyor.com/project/jerwuqu/wblocks/build/artifacts).
 
 ## Steps
 0. Clone the git repo and include external dependencies.
