@@ -16,6 +16,53 @@ wchar_t* strWiden(const char* inStr, int inLen, int* outLen)
     return outStr;
 }
 
+static char* toml_table_string(toml_table_t* table, char* key)
+{
+    const char* raw;
+    if (raw = toml_raw_in(table, key)) {
+        char* str;
+        if (toml_rtos(raw, &str)) {
+            printf("Failed to parse 'wblocks.toml': Invalid string '%s'\n", key);
+            return NULL;
+        }
+        return str;
+    } else {
+        return NULL;
+    }
+}
+
+static int loadBlock(toml_table_t* block)
+{
+    // Create style
+    struct block_BlockStyle style = { 0 };
+    style.color = 0xffffff;
+
+    // Get style info from config
+    char* str;
+    if (str = toml_table_string(block, "text")) {
+        style.text.wstr = strWiden(str, (int)strlen(str), &style.text.wlen);
+        free(str);
+    }
+
+    if (str = toml_table_string(block, "min_width")) {
+        style.minWidthStr.wstr = strWiden(str, (int)strlen(str), &style.minWidthStr.wlen);
+        free(str);
+    }
+
+    // Finally, create block using text source
+    if (str = toml_table_string(block, "script")) {
+        block_addScriptBlock(str, &style);
+        free(str);
+    } else if (style.text.wlen) {
+        block_addStaticBlock(&style);
+    } else {
+        printf("Failed to parse 'wblocks.toml': No block text source\n");
+        return 1;
+    }
+
+    return 0;
+}
+
 static int loadBlocks()
 {
     // Read file
@@ -43,28 +90,9 @@ static int loadBlocks()
     }
 
     // Parse block array
-    char* str;
-    const char* raw;
     toml_table_t* block;
     for (int i = 0; (block = toml_table_at(blocks, i)); i++) {
-        if (raw = toml_raw_in(block, "text")) {
-            if (toml_rtos(raw, &str)) {
-                printf("Failed to parse 'wblocks.toml': Invalid block text\n");
-                toml_free(toml);
-                return 1;
-            }
-            block_addStaticBlock(str);
-            free(str);
-        } else if (raw = toml_raw_in(block, "script")) {
-            if (toml_rtos(raw, &str)) {
-                printf("Failed to parse 'wblocks.toml': Invalid block script\n");
-                toml_free(toml);
-                return 1;
-            }
-            block_addScriptBlock(str);
-            free(str);
-        } else {
-            printf("Failed to parse 'wblocks.toml': No block text source\n");
+        if (loadBlock(block)) {
             toml_free(toml);
             return 1;
         }

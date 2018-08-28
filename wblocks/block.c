@@ -182,13 +182,17 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
     return 0;
 }
 
-static inline struct block_Block* createBlockBase()
+static inline struct block_Block* createBlockBase(struct block_BlockStyle* style)
 {
-    // Create bar block
+    // Create block
     struct block_Block* block = malloc(sizeof(struct block_Block));
     memset(block, 0, sizeof(struct block_Block));
     block->blockId = blockCount;
-    block->color = 0xffffff;
+
+    // Copy style
+    memcpy(&block->style, style, sizeof(struct block_BlockStyle));
+    block->style.text.wstr = _wcsdup(style->text.wstr);
+    block->style.minWidthStr.wstr = _wcsdup(style->minWidthStr.wstr);
 
     // Add to list
     // todo: expand by factor of 2
@@ -198,18 +202,20 @@ static inline struct block_Block* createBlockBase()
 }
 
 // Only to be used in case of error when creating block - never afterwards
-// todo: allow to be used afterwards as well
+// todo: make this a proper function to remove any block
 //     + shrink "blocks" by factor of 2
 static inline void freeLastBlock()
 {
     blockCount--;
+    free(blocks[blockCount]->style.text.wstr);
+    free(blocks[blockCount]->style.minWidthStr.wstr);
     free(blocks[blockCount]);
 }
 
-struct block_Block* block_addScriptBlock(char* scriptPath)
+struct block_Block* block_addScriptBlock(char* scriptPath, struct block_BlockStyle* style)
 {
     printf("Loading: %s\n", scriptPath);
-    struct block_Block* block = createBlockBase();
+    struct block_Block* block = createBlockBase(style);
     block->blockIsScripted = 1;
 
     // Create thread data
@@ -229,11 +235,9 @@ struct block_Block* block_addScriptBlock(char* scriptPath)
     return block;
 }
 
-struct block_Block* block_addStaticBlock(char* str)
+struct block_Block* block_addStaticBlock(struct block_BlockStyle* style)
 {
-    struct block_Block* block = createBlockBase();
-    block->text.wstr = strWiden(str, strlen(str), &block->text.wlen);
-    return block;
+    return createBlockBase(style);
 }
 
 void block_barEventHandler(struct block_ModifyEvent* event)
@@ -242,17 +246,17 @@ void block_barEventHandler(struct block_ModifyEvent* event)
     struct block_Block* block = blocks[event->blockId];
 
     if (event->type == BLOCK_MEVENT_SETTEXT) {
-        if (block->text.wlen != event->wstrlen || memcmp(block->text.wstr, event->wstr, event->wstrlen * sizeof(wchar_t))) {
-            free(block->text.wstr);
-            block->text.wstr = event->wstr;
-            block->text.wlen = event->wstrlen;
+        if (block->style.text.wlen != event->wstrlen || memcmp(block->style.text.wstr, event->wstr, event->wstrlen * sizeof(wchar_t))) {
+            free(block->style.text.wstr);
+            block->style.text.wstr = event->wstr;
+            block->style.text.wlen = event->wstrlen;
             bar_redraw();
         } else {
             free(event->wstr);
         }
     } else if (event->type == BLOCK_MEVENT_SETCOLOR) {
-        if (block->color != event->color) {
-            block->color = event->color;
+        if (block->style.color != event->color) {
+            block->style.color = event->color;
             bar_redraw();
         }
     }

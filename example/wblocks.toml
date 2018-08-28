@@ -3,6 +3,7 @@ text = " | "
 
 [[block]]
 script = "example.lua"
+min_width = "example"
 
 [[block]]
 text = " | "

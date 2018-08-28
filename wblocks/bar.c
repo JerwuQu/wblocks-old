@@ -73,7 +73,7 @@ static void freeResources()
     font = NULL;
 }
 
-static HWND getTaskbar()
+static HWND findTaskbar()
 {
     HWND temp = FindWindow("Shell_TrayWnd", NULL);
     if (!temp) {
@@ -94,7 +94,7 @@ static HWND getTaskbar()
 static void updateWindow()
 {
     if (barWnd == NULL) return;
-    taskbarWnd = getTaskbar();
+    taskbarWnd = findTaskbar();
     if (taskbarWnd == NULL) return;
 
     // Set taskbar as parent
@@ -192,19 +192,31 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         int blockCount = block_getBlockCount();
         SIZE textSize;
         for (int i = blockCount - 1; i >= 0; i--) {
-            SetTextColor(hdc, blocks[i]->color);
-            DrawTextW(hdc, blocks[i]->text.wstr, blocks[i]->text.wlen, &drawRect, BAR_TEXT_FLAGS);
-            GetTextExtentPoint32W(hdc, blocks[i]->text.wstr, blocks[i]->text.wlen, &textSize);
-            drawRect.right -= textSize.cx;
+            SetTextColor(hdc, blocks[i]->style.color);
+
+            // Get minimum width
+            int minWidth = 0;
+            GetTextExtentPoint32W(hdc, blocks[i]->style.minWidthStr.wstr, blocks[i]->style.minWidthStr.wlen, &textSize);
+            minWidth = textSize.cx;
+
+            // Draw text
+            DrawTextW(hdc, blocks[i]->style.text.wstr, blocks[i]->style.text.wlen, &drawRect, BAR_TEXT_FLAGS);
+            GetTextExtentPoint32W(hdc, blocks[i]->style.text.wstr, blocks[i]->style.text.wlen, &textSize);
+
+            // Move rect
+            int width = textSize.cx > minWidth ? textSize.cx : minWidth;
+            drawRect.right -= width;
+
+            // Save result for mosue interaction
             blocks[i]->bar_xpos = drawRect.right;
-            blocks[i]->bar_width = textSize.cx;
+            blocks[i]->bar_width = width;
         }
 
         // End
         EndPaint(hwnd, &ps);
         return 0;
     } else if (msg == WM_LBUTTONDOWN) {
-        RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+        RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE); // todo: is this needed?
 
         // Find affected block
         int mx = GET_X_LPARAM(lParam);

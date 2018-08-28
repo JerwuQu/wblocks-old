@@ -30,16 +30,23 @@ struct block_BlockThreadData
     struct ltimer timerRoot;
 };
 
+struct block_BlockStyle
+{
+    struct wtext text;
+    COLORREF color;
+    struct wtext minWidthStr;
+};
+
 // _NOT_ to be accessed from script thread
 struct block_Block
 {
     int blockId;
+    struct block_BlockStyle style;
+
     char blockIsScripted;
     DWORD scriptThreadId;
-    int bar_xpos, bar_width;
 
-    struct wtext text;
-    COLORREF color;
+    int bar_xpos, bar_width;
 };
 
 enum block_ModifyEventType
@@ -78,8 +85,8 @@ struct block_InteractEvent
     enum block_InteractEventType type;
 };
 
-struct block_Block* block_addScriptBlock(char* scriptPath);
-struct block_Block* block_addStaticBlock(char* str);
+struct block_Block* block_addScriptBlock(char* scriptPath, struct block_BlockStyle* style);
+struct block_Block* block_addStaticBlock(struct block_BlockStyle* style);
 void block_barEventHandler(struct block_ModifyEvent* event);
 int block_getBlockCount();
 struct block_Block** block_getBlocks();
