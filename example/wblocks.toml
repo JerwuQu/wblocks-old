@@ -1,5 +1,6 @@
 [[block]]
 text = " | "
+color = [255, 255, 0]
 
 [[block]]
 script = "example.lua"
@@ -7,3 +8,4 @@ min_width = "example"
 
 [[block]]
 text = " | "
+color = [0, 255, 255]

@@ -1,6 +1,5 @@
-Config for default color
 Config text align
 Config font and size
 Calculate text width and resize wblocks (?) (probably not needed if width is set in config)
 Properly clean up on exit
-Make mouse clicks more reliable - you currently need to click on actual text pixels for it to register
+Make mouse clicks more reliable - you currently need to click on actual text pixels for it to register (perhaps listen in DLL instead?)
