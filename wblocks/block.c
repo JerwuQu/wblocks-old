@@ -220,7 +220,7 @@ static inline void freeLastBlock()
 
 struct block_Block* block_addScriptBlock(char* scriptPath, struct block_BlockStyle* style)
 {
-    printf("Loading: %s\n", scriptPath);
+    printf("- Loading: %s\n", scriptPath);
     struct block_Block* block = createBlockBase(style);
     block->blockIsScripted = 1;
 

@@ -285,6 +285,7 @@ static int createWindow()
     // Update
     updateWindow();
 
+    printf("Bar created!\n");
     return 0;
 }
 
@@ -298,7 +299,7 @@ static VOID CALLBACK aliveTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWOR
 {
     // Check when we got last pong
     if (time(0) - lastPong >= HOOK_DEAD_TIME) {
-        printf("Bar dead!\n");
+        printf("Bar dead. Updating...\n");
         if (barWnd == NULL) {
             createWindow();
         } else {

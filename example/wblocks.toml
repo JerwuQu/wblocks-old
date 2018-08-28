@@ -1,5 +1,5 @@
 [[block]]
-text = " | "
+text = " |> "
 color = [255, 255, 0]
 align = "right"
 min_width = "example"
@@ -12,7 +12,7 @@ font = "Comic Sans MS"
 font_size = 24
 
 [[block]]
-text = " | "
+text = " <| "
 color = [0, 255, 255]
 align = "left"
 min_width = "example"

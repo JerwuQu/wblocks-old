@@ -199,6 +199,8 @@ int main()
         return 1;
     }
 
+    printf("Blocks loaded!\n");
+
     // Message loop
     MSG message;
     while (GetMessage(&message, NULL, 0, 0)) {
