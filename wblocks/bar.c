@@ -192,24 +192,36 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         int blockCount = block_getBlockCount();
         SIZE textSize;
         for (int i = blockCount - 1; i >= 0; i--) {
-            SetTextColor(hdc, blocks[i]->style.color);
+            struct block_Block* block = blocks[i];
+            SetTextColor(hdc, block->style.color);
 
             // Get minimum width
             int minWidth = 0;
-            GetTextExtentPoint32W(hdc, blocks[i]->style.minWidthStr.wstr, blocks[i]->style.minWidthStr.wlen, &textSize);
+            GetTextExtentPoint32W(hdc, block->style.minWidthStr.wstr, block->style.minWidthStr.wlen, &textSize);
             minWidth = textSize.cx;
 
-            // Draw text
-            DrawTextW(hdc, blocks[i]->style.text.wstr, blocks[i]->style.text.wlen, &drawRect, BAR_TEXT_FLAGS);
-            GetTextExtentPoint32W(hdc, blocks[i]->style.text.wstr, blocks[i]->style.text.wlen, &textSize);
+            // Get actual width
+            GetTextExtentPoint32W(hdc, block->style.text.wstr, block->style.text.wlen, &textSize);
+            int textWidth = textSize.cx;
+            int width = textWidth > minWidth ? textWidth : minWidth;
 
-            // Move rect
-            int width = textSize.cx > minWidth ? textSize.cx : minWidth;
-            drawRect.right -= width;
+            // Draw text
+            int xoffset = 0;
+            if (block->style.textAlign == BLOCK_ALIGN_LEFT) {
+                xoffset = textWidth - width;
+                drawRect.right += xoffset;
+            } else if (block->style.textAlign == BLOCK_ALIGN_CENTER) {
+                xoffset = (textWidth - width) / 2;
+                drawRect.right += xoffset;
+            }
+            DrawTextW(hdc, block->style.text.wstr, block->style.text.wlen, &drawRect, BAR_TEXT_FLAGS);
+
+            // Reset x offset and move rect
+            drawRect.right -= width + xoffset;
 
             // Save result for mosue interaction
-            blocks[i]->bar_xpos = drawRect.right;
-            blocks[i]->bar_width = width;
+            block->bar_xpos = drawRect.right;
+            block->bar_width = width;
         }
 
         // End

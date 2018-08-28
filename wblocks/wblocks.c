@@ -71,6 +71,7 @@ static int loadBlock(toml_table_t* block)
     // Create style
     struct block_BlockStyle style = { 0 };
     style.color = 0xffffff;
+    style.textAlign = BLOCK_ALIGN_CENTER;
 
     // Get style info from config
     char* str;
@@ -81,6 +82,19 @@ static int loadBlock(toml_table_t* block)
 
     if (str = toml_table_string(block, "min_width")) {
         style.minWidthStr.wstr = strWiden(str, (int)strlen(str), &style.minWidthStr.wlen);
+        free(str);
+    }
+
+    if (str = toml_table_string(block, "align")) {
+        if (!strcmp(str, "left")) {
+            style.textAlign = BLOCK_ALIGN_LEFT;
+        } else if (!strcmp(str, "center")) {
+            style.textAlign = BLOCK_ALIGN_CENTER;
+        } else if (!strcmp(str, "right")) {
+            style.textAlign = BLOCK_ALIGN_RIGHT;
+        } else {
+            printf("Failed to parse 'wblocks.toml': Invalid text align! Valid values: [left, center, right]\n");
+        }
         free(str);
     }
 

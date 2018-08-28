@@ -1,4 +1,3 @@
-Config text align
 Config font and size
 Calculate text width and resize wblocks (?) (probably not needed if width is set in config)
 Properly clean up on exit

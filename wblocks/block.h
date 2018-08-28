@@ -30,9 +30,17 @@ struct block_BlockThreadData
     struct ltimer timerRoot;
 };
 
+enum block_BlockTextAlign
+{
+    BLOCK_ALIGN_LEFT,
+    BLOCK_ALIGN_CENTER,
+    BLOCK_ALIGN_RIGHT
+};
+
 struct block_BlockStyle
 {
     struct wtext text;
+    enum block_BlockTextAlign textAlign;
     COLORREF color;
     struct wtext minWidthStr;
 };
