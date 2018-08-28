@@ -26,7 +26,7 @@
 @rem Build wblocks-dll
 %WB_CL% /W3 /Foobj\wblocks-dll\ wblocks-dll\*.c
 @if errorlevel 1 goto :BUILDERR
-%WB_LINK% /DLL /IMPLIB:%TEMP%\wblocks-dll.lib /OUT:bin\wblocks-dll.dll user32.lib obj\wblocks-dll\*.obj
+%WB_LINK% /DLL /IMPLIB:%TEMP%\wblocks-dll.lib /OUT:bin\wblocks.dll user32.lib obj\wblocks-dll\*.obj
 @if errorlevel 1 goto :BUILDERR
 
 @rem Copy files into bin

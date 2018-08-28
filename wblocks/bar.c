@@ -131,7 +131,7 @@ static int injectHook()
     if (!taskbarWnd) return 1;
     if (hook) removeHook();
 
-    dll = LoadLibraryA("wblocks-dll.dll");
+    dll = LoadLibraryA("wblocks.dll");
     if (!dll) {
         printf("DLL failed to load!\n");
         printWin32Error();
