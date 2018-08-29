@@ -154,6 +154,9 @@ static void scriptTimerHandler(struct block_BlockThreadData* threadData)
 
 static void scriptBlockEventCall(lua_State* L, char* name, int argCount)
 {
+    // Clear unrelated values on stack
+    while (lua_gettop(L) > argCount) lua_remove(L, 1);
+
     // Find block table
     lua_getglobal(L, "block");
     if (lua_istable(L, -1)) {
@@ -170,7 +173,7 @@ static void scriptBlockEventCall(lua_State* L, char* name, int argCount)
         }
     }
 
-    // Clear stack
+    // Clear stack after us
     lua_settop(L, 0);
 }
 
