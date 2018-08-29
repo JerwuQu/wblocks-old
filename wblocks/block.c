@@ -127,15 +127,36 @@ static void scriptTimerHandler(struct block_BlockThreadData* threadData)
     }
 }
 
-// todo: allow for variable amount of arguments for the call
-static void scriptBlockEventCall(lua_State* L, char* name)
+static void scriptBlockEventCall(lua_State* L, char* name, char* argTypes, ...)
 {
+    // Find block table
     lua_getglobal(L, "block");
     if (lua_istable(L, -1)) {
+        // Find function
         lua_pushstring(L, name);
         lua_gettable(L, -2);
         if (lua_isfunction(L, -1)) {
-            if (lua_pcall(L, 0, 0, 0)) {
+            // Handle arguments - handles bools, ints and strings
+            va_list valist;
+            va_start(valist, argTypes);
+            int i = 0;
+            for (;argTypes[i]; i++) {
+                if (argTypes[i] == 'b') {
+                    lua_pushboolean(L, va_arg(valist, int));
+                } else if (argTypes[i] == 'i') {
+                    lua_pushinteger(L, va_arg(valist, int));
+                } else if (argTypes[i] == 's') {
+                    lua_pushstring(L, va_arg(valist, char*));
+                } else {
+                    printf("Invalid argument type '%c'\n", argTypes[i]);
+                    lua_pop(L, 1);
+                    return;
+                }
+            }
+            va_end(valist);
+
+            // Call
+            if (lua_pcall(L, i, 0, 0)) {
                 printf("Lua error: %s\n", lua_tostring(L, -1));
             }
             lua_pop(L, 1);
@@ -150,7 +171,9 @@ static void scriptBlockEventCall(lua_State* L, char* name)
 static void scriptEventHandler(struct block_InteractEvent* event, struct block_BlockThreadData* threadData)
 {
     if (event->type == BLOCK_IEVENT_MOUSE_DOWN) {
-        scriptBlockEventCall(threadData->L, "mousedown");
+        scriptBlockEventCall(threadData->L, "mousedown", "");
+    } else if (event->type == BLOCK_IEVENT_MOUSE_SCROLL) {
+        scriptBlockEventCall(threadData->L, "mousescroll", "i", event->wheelDelta);
     }
 
     free(event);

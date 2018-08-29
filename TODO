@@ -4,7 +4,6 @@ Grunt work and bugfixes:
     Make mouse clicks more reliable - you currently need to click on actual text pixels for it to register (perhaps listen in DLL instead?)
 
 Features:
-    Scroll event
     Mod keys (ctrl, shift, alt) for interact events
 
 Minor features:

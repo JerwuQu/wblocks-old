@@ -64,8 +64,7 @@ enum block_ModifyEventType
 {
     BLOCK_MEVENT_NONE,
     BLOCK_MEVENT_SETTEXT,
-    BLOCK_MEVENT_SETCOLOR,
-    BLOCK_MEVENT_MOUSE_DOWN
+    BLOCK_MEVENT_SETCOLOR
 };
 
 struct block_ModifyEvent
@@ -88,12 +87,18 @@ struct block_ModifyEvent
 enum block_InteractEventType
 {
     BLOCK_IEVENT_NONE,
-    BLOCK_IEVENT_MOUSE_DOWN
+    BLOCK_IEVENT_MOUSE_DOWN,
+    BLOCK_IEVENT_MOUSE_SCROLL
 };
 
 struct block_InteractEvent
 {
     enum block_InteractEventType type;
+
+    union
+    {
+        int wheelDelta;
+    };
 };
 
 struct block_Block* block_addScriptBlock(char* scriptPath, struct block_BlockStyle* style);

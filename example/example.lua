@@ -14,4 +14,8 @@ function block.mousedown()
     print("Mouse pressed!")
 end
 
+function block.mousescroll(delta)
+    print("Scroll", delta)
+end
+
 a()

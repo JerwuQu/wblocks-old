@@ -150,6 +150,27 @@ static int injectHook()
     return 0;
 }
 
+static struct block_Block* findInteractedBlock(int mouseX)
+{
+    struct block_Block** blocks = block_getBlocks();
+    int blockCount = block_getBlockCount();
+    for (int i = 0; i < blockCount; i++) {
+        if (mouseX >= blocks[i]->bar_xpos && mouseX < blocks[i]->bar_xpos + blocks[i]->bar_width) {
+            return blocks[i];
+        }
+    }
+
+    return NULL;
+}
+
+static POINT screenLParamToClientArea(HWND hwnd, LPARAM lParam)
+{
+    POINTS sp = MAKEPOINTS(lParam);
+    POINT lp = {sp.x, sp.y};
+    ScreenToClient(hwnd, &lp);
+    return lp;
+}
+
 static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (msg == WM_PAINT) {
@@ -219,21 +240,22 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE); // todo: is this needed?
 
         // Find affected block
-        int mx = GET_X_LPARAM(lParam);
-        struct block_Block** blocks = block_getBlocks();
-        int blockCount = block_getBlockCount();
-        for (int i = 0; i < blockCount; i++) {
-            if (mx >= blocks[i]->bar_xpos && mx < blocks[i]->bar_xpos + blocks[i]->bar_width) {
-                if (blocks[i]->blockIsScripted) {
-                    // Create event
-                    struct block_InteractEvent* event = malloc(sizeof(struct block_InteractEvent));
-                    event->type = BLOCK_IEVENT_MOUSE_DOWN;
-
-                    // Send event and abandon ownership over struct
-                    PostThreadMessage(blocks[i]->scriptThreadId, WBLOCKS_WM_BLOCK_INTERACT_EVENT, 0, (LPARAM)event);
-                }
-                break;
-            }
+        struct block_Block* block = findInteractedBlock(GET_X_LPARAM(lParam));
+        if (block) {
+            // Create event and send event
+            struct block_InteractEvent* event = malloc(sizeof(struct block_InteractEvent));
+            event->type = BLOCK_IEVENT_MOUSE_DOWN;
+            PostThreadMessage(block->scriptThreadId, WBLOCKS_WM_BLOCK_INTERACT_EVENT, 0, (LPARAM)event);
+        }
+    } else if (msg == WM_MOUSEWHEEL) {
+        // Find affected block
+        struct block_Block* block = findInteractedBlock(screenLParamToClientArea(hwnd, lParam).x);
+        if (block) {
+            // Create event and send event
+            struct block_InteractEvent* event = malloc(sizeof(struct block_InteractEvent));
+            event->type = BLOCK_IEVENT_MOUSE_SCROLL;
+            event->wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+            PostThreadMessage(block->scriptThreadId, WBLOCKS_WM_BLOCK_INTERACT_EVENT, 0, (LPARAM)event);
         }
     } else if (msg == WBLOCKS_WM_PONG) {
         lastPong = time(0);
