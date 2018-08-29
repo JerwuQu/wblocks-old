@@ -15,7 +15,7 @@ static inline struct block_BlockThreadData* getBlockThreadData(lua_State* L)
     return lua_touserdata(L, -1);
 }
 
-static int lSetText(lua_State* L)
+static int l_block_settext(lua_State* L)
 {
     if (!lua_isstring(L, 1)) return luaL_argerror(L, 1, "not a string");
 
@@ -31,7 +31,7 @@ static int lSetText(lua_State* L)
     return 0;
 }
 
-static int lSetColor(lua_State* L)
+static int l_block_setcolor(lua_State* L)
 {
     if (!lua_isnumber(L, 1)) return luaL_argerror(L, 1, "not a number");
     if (!lua_isnumber(L, 2)) return luaL_argerror(L, 2, "not a number");
@@ -49,7 +49,7 @@ static int lSetColor(lua_State* L)
     return 0;
 }
 
-static int lAddTimer(lua_State* L)
+static int l_timer_add(lua_State* L)
 {
     if (!lua_isnumber(L, 1)) return luaL_argerror(L, 1, "not a number");
     if (!lua_isfunction(L, 2)) return luaL_argerror(L, 2, "not a function");
@@ -58,13 +58,17 @@ static int lAddTimer(lua_State* L)
     lua_pushvalue(L, 2);
     int ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
+    // Get threadData
+    struct block_BlockThreadData* threadData = getBlockThreadData(L);
+
     // Create timer
     struct ltimer* timer = malloc(sizeof(struct ltimer));
+    timer->id = ++threadData->timerIdCounter;
     timer->time = GetTickCount64() + lua_tointeger(L, 1);
     timer->luaRef = ref;
 
     // Place in timer list
-    struct ltimer* current = &getBlockThreadData(L)->timerRoot;
+    struct ltimer* current = &threadData->timerRoot;
     while (current->next && timer->time >= current->next->time) {
         current = current->next;
     }
@@ -73,6 +77,29 @@ static int lAddTimer(lua_State* L)
     timer->prev = current;
     if (current->next) current->next->prev = timer;
     current->next = timer;
+
+    // Return timer id
+    lua_pushinteger(L, timer->id);
+    return 1;
+}
+
+static int l_timer_remove(lua_State* L)
+{
+    if (!lua_isnumber(L, 1)) return luaL_argerror(L, 1, "not a number");
+    lua_Integer timerId = lua_tointeger(L, 1);
+
+    // Search for timer
+    struct ltimer* current = &getBlockThreadData(L)->timerRoot;
+    while (current && current->id != timerId) {
+        current = current->next;
+    }
+
+    // Remove timer
+    if (current) {
+        current->prev->next = current->next;
+        if (current->next) current->next->prev = current->prev;
+        free(current);
+    }
 
     return 0;
 }
@@ -143,20 +170,26 @@ static DWORD WINAPI threadProc(LPVOID lpParameter)
     lua_pushlightuserdata(L, threadData);
     lua_settable(L, LUA_REGISTRYINDEX);
 
-    // Add functions
+    // Add function tables
     lua_newtable(L);
         lua_pushstring(L, "setText");
-        lua_pushcfunction(L, lSetText);
+        lua_pushcfunction(L, l_block_settext);
         lua_settable(L, -3);
 
         lua_pushstring(L, "setColor");
-        lua_pushcfunction(L, lSetColor);
-        lua_settable(L, -3);
-
-        lua_pushstring(L, "addTimer");
-        lua_pushcfunction(L, lAddTimer);
+        lua_pushcfunction(L, l_block_setcolor);
         lua_settable(L, -3);
     lua_setglobal(L, "block");
+
+    lua_newtable(L);
+        lua_pushstring(L, "add");
+        lua_pushcfunction(L, l_timer_add);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "remove");
+        lua_pushcfunction(L, l_timer_remove);
+        lua_settable(L, -3);
+    lua_setglobal(L, "timer");
 
     // Load script
     if (luaL_dofile(L, threadData->scriptPath)) {

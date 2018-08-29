@@ -15,6 +15,7 @@ struct wtext
 
 struct ltimer
 {
+    lua_Integer id;
     uint64_t time;
     int luaRef;
     struct ltimer* prev;
@@ -28,6 +29,7 @@ struct block_BlockThreadData
     char* scriptPath;
     lua_State* L;
     struct ltimer timerRoot;
+    lua_Integer timerIdCounter;
 };
 
 enum block_BlockTextAlign

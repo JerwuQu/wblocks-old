@@ -1,4 +1,19 @@
-Properly clean up on exit and errors
-Make mouse clicks more reliable - you currently need to click on actual text pixels for it to register (perhaps listen in DLL instead?)
-Calculate text width and resize wblocks (?) (probably not needed if width is set in config)
-Allow single script to control multiple blocks. Unsure how lua API would look.
+Grunt work and bugfixes:
+    Properly clean up on exit and errors
+    Good config documentation on wiki
+    Make mouse clicks more reliable - you currently need to click on actual text pixels for it to register (perhaps listen in DLL instead?)
+
+Features:
+    Scroll event
+    Mod keys (ctrl, shift, alt) for interact events
+
+Minor features:
+    Config for manual bar colorkey
+    Config for hiding terminal
+    Function for creating a repeating timer
+
+Unspecified:
+    Allow single script to control multiple blocks. Unsure how lua API would look.
+
+Tests:
+    What happens with taskbars on multiple monitors?
