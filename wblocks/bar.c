@@ -242,7 +242,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         // Find affected block
         struct block_Block* block = findInteractedBlock(GET_X_LPARAM(lParam));
         if (block) {
-            // Create event and send event
+            // Create and send event
             struct block_InteractEvent* event = malloc(sizeof(struct block_InteractEvent));
             event->type = BLOCK_IEVENT_MOUSE_DOWN;
             PostThreadMessage(block->scriptThreadId, WBLOCKS_WM_BLOCK_INTERACT_EVENT, 0, (LPARAM)event);
@@ -251,7 +251,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         // Find affected block
         struct block_Block* block = findInteractedBlock(screenLParamToClientArea(hwnd, lParam).x);
         if (block) {
-            // Create event and send event
+            // Create and send event
             struct block_InteractEvent* event = malloc(sizeof(struct block_InteractEvent));
             event->type = BLOCK_IEVENT_MOUSE_SCROLL;
             event->wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;

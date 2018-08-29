@@ -8,6 +8,31 @@ static char BLOCK_THREAD_DATA_REGKEY;
 static int blockCount = 0;
 static struct block_Block** blocks = NULL;
 
+// Copy-pasted from https://www.lua.org/pil/24.2.3.html
+// Used for debugging purposes
+void lua_stackDump(lua_State* L) {
+    int top = lua_gettop(L);
+    for (int i = 1; i <= top; i++) {    /* repeat for each level */
+        int t = lua_type(L, i);
+        switch (t) {
+            case LUA_TSTRING:    /* strings */
+                printf("'%s'", lua_tostring(L, i));
+                break;
+            case LUA_TBOOLEAN:    /* booleans */
+                printf(lua_toboolean(L, i) ? "true" : "false");
+                break;
+            case LUA_TNUMBER:    /* numbers */
+                printf("%g", lua_tonumber(L, i));
+                break;
+            default:    /* other values */
+                printf("%s", lua_typename(L, t));
+                break;
+        }
+        printf("    ");    /* put a separator */
+    }
+    printf("\n");    /* end the listing */
+}
+
 static inline struct block_BlockThreadData* getBlockThreadData(lua_State* L)
 {
     lua_pushlightuserdata(L, &BLOCK_THREAD_DATA_REGKEY);
@@ -127,7 +152,7 @@ static void scriptTimerHandler(struct block_BlockThreadData* threadData)
     }
 }
 
-static void scriptBlockEventCall(lua_State* L, char* name, char* argTypes, ...)
+static void scriptBlockEventCall(lua_State* L, char* name, int argCount)
 {
     // Find block table
     lua_getglobal(L, "block");
@@ -136,44 +161,26 @@ static void scriptBlockEventCall(lua_State* L, char* name, char* argTypes, ...)
         lua_pushstring(L, name);
         lua_gettable(L, -2);
         if (lua_isfunction(L, -1)) {
-            // Handle arguments - handles bools, ints and strings
-            va_list valist;
-            va_start(valist, argTypes);
-            int i = 0;
-            for (;argTypes[i]; i++) {
-                if (argTypes[i] == 'b') {
-                    lua_pushboolean(L, va_arg(valist, int));
-                } else if (argTypes[i] == 'i') {
-                    lua_pushinteger(L, va_arg(valist, int));
-                } else if (argTypes[i] == 's') {
-                    lua_pushstring(L, va_arg(valist, char*));
-                } else {
-                    printf("Invalid argument type '%c'\n", argTypes[i]);
-                    lua_pop(L, 1);
-                    return;
-                }
-            }
-            va_end(valist);
-
-            // Call
-            if (lua_pcall(L, i, 0, 0)) {
+            // Prepare
+            lua_remove(L, -2); // Remove "block" table from stack
+            lua_insert(L, 1);  // Move function to bottom of stack
+            if (lua_pcall(L, argCount, 0, 0)) {
                 printf("Lua error: %s\n", lua_tostring(L, -1));
             }
-            lua_pop(L, 1);
-        } else {
-            lua_pop(L, 2);
         }
-    } else {
-        lua_pop(L, 1);
     }
+
+    // Clear stack
+    lua_settop(L, 0);
 }
 
 static void scriptEventHandler(struct block_InteractEvent* event, struct block_BlockThreadData* threadData)
 {
     if (event->type == BLOCK_IEVENT_MOUSE_DOWN) {
-        scriptBlockEventCall(threadData->L, "mousedown", "");
+        scriptBlockEventCall(threadData->L, "mousedown", 0);
     } else if (event->type == BLOCK_IEVENT_MOUSE_SCROLL) {
-        scriptBlockEventCall(threadData->L, "mousescroll", "i", event->wheelDelta);
+        lua_pushinteger(threadData->L, event->wheelDelta);
+        scriptBlockEventCall(threadData->L, "mousescroll", 1);
     }
 
     free(event);
