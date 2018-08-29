@@ -177,13 +177,32 @@ static void scriptBlockEventCall(lua_State* L, char* name, int argCount)
     lua_settop(L, 0);
 }
 
+static void pushModifierKeyTableOntoStack(lua_State* L)
+{
+    lua_newtable(L);
+
+    lua_pushstring(L, "ctrl");
+    lua_pushboolean(L, GetKeyState(VK_CONTROL) < 0);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "shift");
+    lua_pushboolean(L, GetKeyState(VK_SHIFT) < 0);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "alt");
+    lua_pushboolean(L, GetKeyState(VK_MENU) < 0);
+    lua_settable(L, -3);
+}
+
 static void scriptEventHandler(struct block_InteractEvent* event, struct block_BlockThreadData* threadData)
 {
     if (event->type == BLOCK_IEVENT_MOUSE_DOWN) {
-        scriptBlockEventCall(threadData->L, "mousedown", 0);
+        pushModifierKeyTableOntoStack(threadData->L);
+        scriptBlockEventCall(threadData->L, "mousedown", 1);
     } else if (event->type == BLOCK_IEVENT_MOUSE_SCROLL) {
         lua_pushinteger(threadData->L, event->wheelDelta);
-        scriptBlockEventCall(threadData->L, "mousescroll", 1);
+        pushModifierKeyTableOntoStack(threadData->L);
+        scriptBlockEventCall(threadData->L, "mousescroll", 2);
     }
 
     free(event);
