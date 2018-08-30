@@ -1,10 +1,7 @@
 Grunt work and bugfixes:
     Properly clean up on exit and errors
-    Good config documentation on wiki
-    Make mouse clicks more reliable - you currently need to click on actual text pixels for it to register (perhaps listen in DLL instead?)
-
-Features:
-    -
+    Make mouse clicks more reliable - you currently need to click on actual text pixels for it to register (but only sometimes??) (perhaps listen in DLL instead?)
+    Clean up code
 
 Minor features:
     Config for manual bar colorkey
@@ -16,3 +13,4 @@ Unspecified:
 
 Tests:
     What happens with taskbars on multiple monitors?
+    More testing regarding when mouse clicks actually register
