@@ -1,0 +1,79 @@
+version: 0.0.{build}
+image: Visual Studio 2017
+clone_folder: C:\wblocks
+build_script:
+- cmd: >-
+    rem Cloning submodules
+
+    cd "C:\wblocks"
+
+    git submodule update --init --recursive
+
+
+    rem ------------------------------------------
+
+
+    rem Setting 32-bit build vars
+
+    call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+
+
+    rem Building LuaJIT
+
+    cd "C:\wblocks\ext\LuaJIT\src"
+
+    msvcbuild.bat
+
+
+    rem Building wblocks
+
+    cd "C:\wblocks"
+
+    msvcbuild.bat
+
+
+    rem Moving binaries
+
+    move bin bin32
+
+    clean.bat
+
+
+    rem ------------------------------------------
+
+
+    rem Setting 64-bit build vars
+
+    call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
+
+
+    rem Building LuaJIT
+
+    cd "C:\wblocks\ext\LuaJIT\src"
+
+    msvcbuild.bat
+
+
+    rem Building wblocks
+
+    cd "C:\wblocks"
+
+    msvcbuild.bat
+
+
+    rem Moving binaries
+
+    move bin bin64
+
+    clean.bat
+
+
+    rem ------------------------------------------
+
+
+    rem Finished!
+artifacts:
+- path: bin32
+  name: wblocks-32bit
+- path: bin64
+  name: wblocks-64bit
