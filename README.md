@@ -1,8 +1,6 @@
 # wblocks
 A taskbar thingy
 
-Download the [latest build](https://ci.appveyor.com/project/jerwuqu/wblocks/build/artifacts).
-
 Make sure to take the 64-bit version if you're running 64-bit Windows. Don't just take the 32-bit one.
 
 ## Building Steps
